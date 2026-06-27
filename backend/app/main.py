@@ -1,9 +1,23 @@
-# backend application entrypoint
-
 from fastapi import FastAPI
 
-app = FastAPI()
+app = FastAPI(
+    title="TradePilot AI",
+    version="1.0.0",
+    description="AI Powered Intraday Trading Assistant"
+)
 
-@app.get('/')
-def read_root():
-    return {'message': 'TradePilot AI backend is running'}
+
+@app.get("/")
+def root():
+    return {
+        "application": "TradePilot AI",
+        "version": "1.0.0",
+        "status": "running"
+    }
+
+
+@app.get("/health")
+def health():
+    return {
+        "status": "healthy"
+    }

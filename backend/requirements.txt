@@ -1,3 +1,21 @@
-# backend dependencies
 fastapi
-uvicorn
+uvicorn[standard]
+
+sqlalchemy
+alembic
+
+psycopg[binary]
+
+pydantic
+pydantic-settings
+
+python-dotenv
+
+python-jose[cryptography]
+passlib[bcrypt]
+
+loguru
+
+orjson
+
+pytest
