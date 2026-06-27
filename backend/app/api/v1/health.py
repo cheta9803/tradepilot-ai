@@ -1,7 +1,15 @@
 from fastapi import APIRouter
 
-router = APIRouter(prefix='/health', tags=['health'])
+from app.core.response import success_response
 
-@router.get('/')
-def health_check():
-    return {'status': 'ok'}
+router = APIRouter(prefix="/health", tags=["Health"])
+
+
+@router.get("")
+async def health():
+    return success_response(
+        data={
+            "status": "healthy"
+        },
+        message="Application is running",
+    )
