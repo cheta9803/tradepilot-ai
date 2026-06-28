@@ -1,6 +1,6 @@
-from app.indicators.ema import EMACalculator
-from app.market.service import MarketService
+from app.indicators.calculators.ema import EMACalculator
 from app.indicators.calculators.sma import SMACalculator
+from app.market.service import MarketService
 
 
 class IndicatorService:

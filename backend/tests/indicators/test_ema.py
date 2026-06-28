@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from app.indicators.ema import EMACalculator
+from app.indicators.calculators.ema import EMACalculator
 from app.market.models import Candle
 
 
