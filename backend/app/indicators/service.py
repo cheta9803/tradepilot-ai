@@ -1,5 +1,7 @@
 from app.indicators.calculators.ema import EMACalculator
 from app.indicators.calculators.sma import SMACalculator
+from app.indicators.calculators.rsi import RSICalculator
+
 from app.market.service import MarketService
 
 
@@ -56,4 +58,28 @@ class IndicatorService:
             "timeframe": timeframe,
             "period": period,
             "sma": value,
+        }
+
+    def calculate_rsi(
+        self,
+        symbol: str,
+        timeframe: str,
+        period: int,
+    ):
+        candles = self.market_service.get_history(
+            symbol=symbol,
+            timeframe=timeframe,
+            limit=period + 20,
+        )
+
+        value = RSICalculator.calculate(
+            candles,
+            period,
+        )
+
+        return {
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "period": period,
+            "rsi": value,
         }
