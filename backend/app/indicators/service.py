@@ -2,6 +2,7 @@ from app.indicators.calculators.ema import EMACalculator
 from app.indicators.calculators.sma import SMACalculator
 from app.indicators.calculators.rsi import RSICalculator
 from app.indicators.calculators.vwap import VWAPCalculator
+from app.indicators.calculators.atr import ATRCalculator
 
 from app.market.service import MarketService
 
@@ -102,4 +103,28 @@ class IndicatorService:
             "symbol": symbol,
             "timeframe": timeframe,
             "vwap": value,
+        }
+
+    def calculate_atr(
+        self,
+        symbol: str,
+        timeframe: str,
+        period: int,
+    ):
+        candles = self.market_service.get_history(
+            symbol=symbol,
+            timeframe=timeframe,
+            limit=period + 20,
+        )
+
+        value = ATRCalculator.calculate(
+            candles,
+            period,
+        )
+
+        return {
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "period": period,
+            "atr": value,
         }

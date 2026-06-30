@@ -4,6 +4,7 @@ from app.indicators.schemas import EMAResponse
 from app.indicators.schemas import SMAResponse
 from app.indicators.schemas import RSIResponse
 from app.indicators.schemas import VWAPResponse
+from app.indicators.schemas import ATRResponse
 
 from app.indicators.service import IndicatorService
 
@@ -71,4 +72,19 @@ async def vwap(
     return service.calculate_vwap(
         symbol=symbol.upper(),
         timeframe=timeframe,
+    )
+
+@router.get(
+    "/atr/{symbol}",
+    response_model=ATRResponse,
+)
+async def atr(
+    symbol: str,
+    timeframe: str = Query(default="5m"),
+    period: int = Query(default=14, ge=2, le=200),
+):
+    return service.calculate_atr(
+        symbol=symbol.upper(),
+        timeframe=timeframe,
+        period=period,
     )

@@ -25,3 +25,9 @@ class VWAPResponse(BaseModel):
     symbol: str
     timeframe: str
     vwap: float
+
+class ATRResponse(BaseModel):
+    symbol: str
+    timeframe: str
+    period: int
+    atr: float
