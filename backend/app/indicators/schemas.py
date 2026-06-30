@@ -31,3 +31,11 @@ class ATRResponse(BaseModel):
     timeframe: str
     period: int
     atr: float
+
+class MACDResponse(BaseModel):
+    symbol: str
+    timeframe: str
+
+    macd: float
+    signal: float
+    histogram: float

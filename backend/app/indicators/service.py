@@ -3,6 +3,7 @@ from app.indicators.calculators.sma import SMACalculator
 from app.indicators.calculators.rsi import RSICalculator
 from app.indicators.calculators.vwap import VWAPCalculator
 from app.indicators.calculators.atr import ATRCalculator
+from app.indicators.calculators.macd import MACDCalculator
 
 from app.market.service import MarketService
 
@@ -127,4 +128,25 @@ class IndicatorService:
             "timeframe": timeframe,
             "period": period,
             "atr": value,
+        }
+
+    def calculate_macd(
+        self,
+        symbol: str,
+        timeframe: str,
+    ):
+        candles = self.market_service.get_history(
+            symbol=symbol,
+            timeframe=timeframe,
+            limit=60,
+        )
+
+        result = MACDCalculator.calculate(
+            candles,
+        )
+
+        return {
+            "symbol": symbol,
+            "timeframe": timeframe,
+            **result,
         }

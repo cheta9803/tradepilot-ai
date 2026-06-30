@@ -5,6 +5,7 @@ from app.indicators.schemas import SMAResponse
 from app.indicators.schemas import RSIResponse
 from app.indicators.schemas import VWAPResponse
 from app.indicators.schemas import ATRResponse
+from app.indicators.schemas import MACDResponse
 
 from app.indicators.service import IndicatorService
 
@@ -87,4 +88,17 @@ async def atr(
         symbol=symbol.upper(),
         timeframe=timeframe,
         period=period,
+    )
+
+@router.get(
+    "/macd/{symbol}",
+    response_model=MACDResponse,
+)
+async def macd(
+    symbol: str,
+    timeframe: str = Query(default="5m"),
+):
+    return service.calculate_macd(
+        symbol=symbol.upper(),
+        timeframe=timeframe,
     )
