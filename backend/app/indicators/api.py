@@ -3,6 +3,8 @@ from fastapi import APIRouter, Query
 from app.indicators.schemas import EMAResponse
 from app.indicators.schemas import SMAResponse
 from app.indicators.schemas import RSIResponse
+from app.indicators.schemas import VWAPResponse
+
 from app.indicators.service import IndicatorService
 
 router = APIRouter(
@@ -56,4 +58,17 @@ async def rsi(
         symbol=symbol.upper(),
         timeframe=timeframe,
         period=period,
+    )
+
+@router.get(
+    "/vwap/{symbol}",
+    response_model=VWAPResponse,
+)
+async def vwap(
+    symbol: str,
+    timeframe: str = Query(default="5m"),
+):
+    return service.calculate_vwap(
+        symbol=symbol.upper(),
+        timeframe=timeframe,
     )

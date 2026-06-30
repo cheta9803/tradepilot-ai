@@ -20,3 +20,8 @@ class RSIResponse(BaseModel):
     timeframe: str
     period: int
     rsi: float
+
+class VWAPResponse(BaseModel):
+    symbol: str
+    timeframe: str
+    vwap: float
