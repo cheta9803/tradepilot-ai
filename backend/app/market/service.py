@@ -1,10 +1,10 @@
-from app.market.provider import MockMarketProvider
+from app.angel.provider import AngelMarketProvider
 
 
 class MarketService:
 
     def __init__(self):
-        self.provider = MockMarketProvider()
+        self.provider = AngelMarketProvider()
 
     def get_history(
         self,

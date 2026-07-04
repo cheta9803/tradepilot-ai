@@ -1,0 +1,2 @@
+class AngelAPIException(Exception):
+    pass

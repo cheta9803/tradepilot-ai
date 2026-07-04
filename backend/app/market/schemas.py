@@ -16,3 +16,9 @@ class CandleResponse(BaseModel):
     close: float
 
     volume: int
+
+class LTPResponse(BaseModel):
+    symbol: str
+    exchange: str
+    token: str
+    ltp: float

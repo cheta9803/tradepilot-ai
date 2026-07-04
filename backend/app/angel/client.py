@@ -1,0 +1,45 @@
+from SmartApi import SmartConnect
+import pyotp
+
+from app.core.config import settings
+from app.angel.exceptions import AngelAPIException
+
+
+class AngelClient:
+
+    @staticmethod
+    def login() -> SmartConnect:
+        """
+        Login to Angel One SmartAPI and return
+        an authenticated SmartConnect client.
+        """
+
+        smart_api = SmartConnect(
+            api_key=settings.angel_api_key,
+        )
+
+        totp = pyotp.TOTP(
+            settings.angel_totp_secret,
+        ).now()
+
+        response = smart_api.generateSession(
+            settings.angel_client_id,
+            settings.angel_pin,
+            totp,
+        )
+
+        if not response.get("status"):
+            raise AngelAPIException(
+                response.get(
+                    "message",
+                    "Angel One login failed.",
+                )
+            )
+
+        refresh_token = response["data"]["refreshToken"]
+
+        smart_api.generateToken(
+            refresh_token,
+        )
+
+        return smart_api

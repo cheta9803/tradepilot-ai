@@ -20,6 +20,14 @@ class Settings(BaseSettings):
 
     access_token_expire_minutes: int = 60
 
+    # -------------------------
+    # Angel One SmartAPI
+    # -------------------------
+    angel_api_key: str = ""
+    angel_client_id: str = ""
+    angel_pin: str = ""
+    angel_totp_secret: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False,
