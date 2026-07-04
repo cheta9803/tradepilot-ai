@@ -6,6 +6,7 @@ from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
+from sqlalchemy import Enum
 
 from app.db.base import Base
 
@@ -33,6 +34,17 @@ class User(Base):
 
     password_hash: Mapped[str] = mapped_column(
         String(255),
+        nullable=False,
+    )
+
+    role: Mapped[str] = mapped_column(
+        Enum(
+            "ADMIN",
+            "TRADER",
+            "PREMIUM",
+            name="user_roles",
+        ),
+        default="TRADER",
         nullable=False,
     )
 
