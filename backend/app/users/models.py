@@ -8,6 +8,8 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy import Enum
 
+from sqlalchemy.orm import relationship
+
 from app.db.base import Base
 
 
@@ -62,4 +64,10 @@ class User(Base):
         DateTime,
         default=datetime.utcnow,
         onupdate=datetime.utcnow,
+    )
+
+    watchlists = relationship(
+        "Watchlist",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
