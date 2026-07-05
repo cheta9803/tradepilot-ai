@@ -7,3 +7,4 @@ class Base(DeclarativeBase):
 
 from app.users.models import User
 from app.watchlist.models import Watchlist
+from app.instruments.models import Instrument
