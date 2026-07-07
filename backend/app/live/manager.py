@@ -2,6 +2,7 @@ from app.instruments.cache import InstrumentCache
 from app.live.client import LiveClient
 from app.live.parser import LiveParser
 from app.live.redis_cache import LiveCache
+from app.watchlist.startup import WatchlistStartup
 
 
 class LiveManager:
@@ -14,6 +15,8 @@ class LiveManager:
         self.client.client.on_error = self.on_error
         self.client.client.on_close = self.on_close
 
+        self.subscribed_tokens: set[str] = set()
+
     def start(self):
         self.client.connect()
 
@@ -25,12 +28,15 @@ class LiveManager:
         exchange: str,
         token: str,
     ):
-        exchange_map = {
-            "NSE": 1,
-            "BSE": 3,
-        }
 
-        exchange_type = exchange_map.get(exchange.upper())
+        if token in self.subscribed_tokens:
+            print(f"{token} already subscribed.")
+            return
+
+        exchange_type = (
+            1 if exchange == "NSE"
+            else 3
+        )
 
         print(
             f"Subscribing: exchange={exchange}, "
@@ -48,6 +54,8 @@ class LiveManager:
             ],
         )
 
+        self.subscribed_tokens.add(token)
+
         print("Subscribe request sent.")
 
     def unsubscribe(
@@ -55,19 +63,40 @@ class LiveManager:
         exchange: str,
         token: str,
     ):
+
+        if token not in self.subscribed_tokens:
+            print(f"{token} is not subscribed.")
+            return
+
+        exchange_type = (
+            1 if exchange == "NSE"
+            else 3
+        )
+
+        print(
+            f"Unsubscribing: exchange={exchange}, "
+            f"exchangeType={exchange_type}, token={token}"
+        )
+
         self.client.client.unsubscribe(
             correlation_id="tradepilot",
             mode=1,
             token_list=[
                 {
-                    "exchangeType": exchange,
+                    "exchangeType": exchange_type,
                     "tokens": [token],
                 }
             ],
         )
 
+        self.subscribed_tokens.remove(token)
+
+        print("Unsubscribe request sent.")
+
     def on_open(self, ws):
         print("Live WebSocket Connected")
+
+        WatchlistStartup.subscribe_all()
 
     def on_close(self, ws):
         print("Live WebSocket Closed")
@@ -80,17 +109,11 @@ class LiveManager:
         ws,
         message,
     ):
-        print("=" * 80)
-        print("LIVE MESSAGE RECEIVED")
-        print(message)
-        print("=" * 80)
-
         token = str(message.get("token"))
 
         instrument = InstrumentCache.get_by_token(token)
 
         if instrument is None:
-            print(f"Instrument not found for token {token}")
             return
 
         data = LiveParser.parse(

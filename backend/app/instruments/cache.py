@@ -5,6 +5,7 @@ from app.instruments.models import Instrument
 class InstrumentCache:
 
     _token_map: dict[str, Instrument] = {}
+    _symbol_map: dict[tuple[str, str], Instrument] = {}
 
     @classmethod
     def load(cls):
@@ -16,6 +17,14 @@ class InstrumentCache:
 
             cls._token_map = {
                 instrument.token: instrument
+                for instrument in instruments
+            }
+
+            cls._symbol_map = {
+                (
+                    instrument.exchange,
+                    instrument.symbol,
+                ): instrument
                 for instrument in instruments
             }
 
@@ -33,3 +42,17 @@ class InstrumentCache:
     ) -> Instrument | None:
 
         return cls._token_map.get(token)
+
+    @classmethod
+    def get_by_symbol(
+        cls,
+        exchange: str,
+        symbol: str,
+    ) -> Instrument | None:
+
+        return cls._symbol_map.get(
+            (
+                exchange.upper(),
+                symbol.upper(),
+            )
+        )

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.auth.dependencies import get_current_active_user
 from app.db import get_db
 from app.users.models import User
+from app.watchlist.live_schemas import WatchlistLiveResponse
 from app.watchlist.schemas import WatchlistCreate
 from app.watchlist.schemas import WatchlistResponse
 from app.watchlist.service import WatchlistService
@@ -48,6 +49,20 @@ def list_watchlist(
     current_user: User = Depends(get_current_active_user),
 ):
     return WatchlistService.list(
+        db=db,
+        current_user=current_user,
+    )
+
+
+@router.get(
+    "/live",
+    response_model=list[WatchlistLiveResponse],
+)
+def list_live_watchlist(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    return WatchlistService.list_live(
         db=db,
         current_user=current_user,
     )

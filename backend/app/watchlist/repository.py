@@ -59,3 +59,35 @@ class WatchlistRepository:
     ) -> None:
         db.delete(watchlist)
         db.commit()
+
+    @staticmethod
+    def get_by_user_and_symbol(
+        db: Session,
+        user_id: int,
+        symbol: str,
+    ) -> Watchlist | None:
+
+        return (
+            db.query(Watchlist)
+            .filter(
+                Watchlist.user_id == user_id,
+                Watchlist.symbol == symbol,
+            )
+            .first()
+        )
+
+    @staticmethod
+    def count_by_symbol(
+        db: Session,
+        exchange: str,
+        symbol: str,
+    ) -> int:
+
+        return (
+            db.query(Watchlist)
+            .filter(
+                Watchlist.exchange == exchange,
+                Watchlist.symbol == symbol,
+            )
+            .count()
+        )
