@@ -3,6 +3,7 @@ from app.live.client import LiveClient
 from app.live.parser import LiveParser
 from app.live.redis_cache import LiveCache
 from app.watchlist.startup import WatchlistStartup
+from app.candles.service import CandleService
 
 
 class LiveManager:
@@ -124,6 +125,17 @@ class LiveManager:
         LiveCache.save(
             token,
             data,
+        )
+
+        print(type(data["timestamp"]), data["timestamp"])
+
+        CandleService.process_tick(
+            exchange=instrument.exchange,
+            symbol=instrument.symbol,
+            token=instrument.token,
+            price=data["ltp"],
+            volume=data["volume"],
+            timestamp=data["timestamp"],
         )
 
         print(f"Saved {instrument.symbol} to Redis.")

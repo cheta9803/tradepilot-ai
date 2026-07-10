@@ -7,12 +7,17 @@ from app.angel.exceptions import AngelAPIException
 
 class AngelClient:
 
-    @staticmethod
-    def login() -> SmartConnect:
+    _client: SmartConnect | None = None
+
+    @classmethod
+    def login(cls) -> SmartConnect:
         """
-        Login to Angel One SmartAPI and return
-        an authenticated SmartConnect client.
+        Returns a shared authenticated SmartConnect
+        instance.
         """
+
+        if cls._client is not None:
+            return cls._client
 
         smart_api = SmartConnect(
             api_key=settings.angel_api_key,
@@ -42,4 +47,6 @@ class AngelClient:
             refresh_token,
         )
 
-        return smart_api
+        cls._client = smart_api
+
+        return cls._client

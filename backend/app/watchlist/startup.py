@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
+from app.history.loader import HistoryLoader
 from app.instruments.cache import InstrumentCache
 from app.watchlist.models import Watchlist
 
@@ -9,16 +10,17 @@ class WatchlistStartup:
 
     @staticmethod
     def subscribe_all() -> None:
-            
+
         from app.live.instance import live_manager
 
         db: Session = SessionLocal()
 
         try:
-            watchlists = db.query(Watchlist).all()
+            watchlists = db.query(
+                Watchlist,
+            ).all()
 
-            subscribed: set[str] = set()
-
+            subscribed: set[tuple[str, str]] = set()
 
             for item in watchlists:
 
@@ -39,6 +41,14 @@ class WatchlistStartup:
                     continue
 
                 try:
+
+                    # Load latest historical candle first
+                    HistoryLoader.load(
+                        exchange=instrument.exchange,
+                        token=instrument.token,
+                    )
+
+                    # Then subscribe to live data
                     live_manager.subscribe(
                         exchange=instrument.exchange,
                         token=instrument.token,
@@ -54,7 +64,7 @@ class WatchlistStartup:
 
                 except Exception as exc:
                     print(
-                        f"Failed to subscribe "
+                        f"Failed to initialize "
                         f"{instrument.symbol}: {exc}"
                     )
 

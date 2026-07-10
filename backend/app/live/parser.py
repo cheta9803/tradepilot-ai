@@ -22,5 +22,5 @@ class LiveParser:
             "low": message.get("low_price_of_the_day", 0) / 100,
             "close": message.get("closed_price", 0) / 100,
             "volume": message.get("volume_trade_for_the_day", 0),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.utcnow(),
         }
