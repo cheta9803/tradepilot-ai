@@ -3,10 +3,7 @@ from datetime import datetime
 from app.candles.builder import CandleBuilder
 from app.candles.models import Candle
 from app.candles.redis_cache import CandleCache
-from app.candles.persistence import CandlePersistence
-
 from app.candles.repository import CandleRepository
-
 from app.db.session import SessionLocal
 
 
@@ -25,70 +22,91 @@ class CandleService:
         timestamp: datetime,
     ) -> None:
 
+        minute = timestamp.replace(
+            second=0,
+            microsecond=0,
+        )
+
         candle = CandleCache.get(
             exchange=exchange,
             token=token,
             timeframe=CandleService.TIMEFRAME,
         )
 
-        minute = timestamp.replace(
-            second=0,
-            microsecond=0,
-        )
-
         if candle is None:
 
-            candle = CandleBuilder.create(
+            CandleService._create_new_candle(
                 exchange=exchange,
                 symbol=symbol,
                 token=token,
-                timeframe=CandleService.TIMEFRAME,
-                timestamp=minute,
+                minute=minute,
                 price=price,
                 volume=volume,
             )
 
-            CandleCache.save(candle)
-
             return
 
-        candle_time = candle.timestamp
-
-        if isinstance(
-            candle_time,
-            str,
+        if CandleService._is_new_minute(
+            candle=candle,
+            minute=minute,
         ):
-            candle_time = datetime.fromisoformat(
-                candle_time,
-            )
 
-        if candle_time != minute:
-            db = SessionLocal()
-
-            try:
-
-                CandleRepository.save(
-                    db=db,
-                    candle=candle,
-                )
-
-            finally:
-
-                db.close()
-
-            candle = CandleBuilder.create(
+            CandleService._create_new_candle(
                 exchange=exchange,
                 symbol=symbol,
                 token=token,
-                timeframe=CandleService.TIMEFRAME,
-                timestamp=minute,
+                minute=minute,
                 price=price,
                 volume=volume,
             )
 
-            CandleCache.save(candle)
-
             return
+
+        CandleService._update_existing_candle(
+            candle=candle,
+            price=price,
+            volume=volume,
+        )
+
+    @staticmethod
+    def _is_new_minute(
+        *,
+        candle: Candle,
+        minute: datetime,
+    ) -> bool:
+
+        return candle.timestamp != minute
+
+    @staticmethod
+    def _create_new_candle(
+        *,
+        exchange: str,
+        symbol: str,
+        token: str,
+        minute: datetime,
+        price: float,
+        volume: int,
+    ) -> None:
+
+        candle = CandleBuilder.create(
+            exchange=exchange,
+            symbol=symbol,
+            token=token,
+            timeframe=CandleService.TIMEFRAME,
+            timestamp=minute,
+            price=price,
+            volume=volume,
+        )
+
+        CandleService._persist(candle)
+
+    @staticmethod
+    def _update_existing_candle(
+        *,
+        candle: Candle,
+        price: float,
+        volume: int,
+    ) -> None:
 
         candle = CandleBuilder.update(
             candle,
@@ -96,4 +114,21 @@ class CandleService:
             volume=volume,
         )
 
+        CandleService._persist(candle)
+
+    @staticmethod
+    def _persist(
+        candle: Candle,
+    ) -> None:
+
         CandleCache.save(candle)
+
+        db = SessionLocal()
+
+        try:
+            CandleRepository.save(
+                db=db,
+                candle=candle,
+            )
+        finally:
+            db.close()
