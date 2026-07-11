@@ -110,11 +110,21 @@ class LiveManager:
         ws,
         message,
     ):
+        print("\n" + "=" * 80)
+        print("LIVE TICK RECEIVED")
+        print(message)
+        print("=" * 80)
+
         token = str(message.get("token"))
+
+        print(f"Token: {token}")
 
         instrument = InstrumentCache.get_by_token(token)
 
+        print(f"Instrument Found: {instrument is not None}")
+
         if instrument is None:
+            print("Instrument not found in cache.")
             return
 
         data = LiveParser.parse(
@@ -122,20 +132,36 @@ class LiveManager:
             instrument=instrument,
         )
 
-        LiveCache.save(
-            token,
-            data,
-        )
+        print(f"LTP: {data['ltp']}")
+        print(f"Volume: {data['volume']}")
 
-        print(type(data["timestamp"]), data["timestamp"])
+        try:
+            LiveCache.save(
+                token,
+                data,
+            )
+            print("LiveCache saved.")
+        except Exception:
+            import traceback
+            print("LiveCache Exception")
+            traceback.print_exc()
 
-        CandleService.process_tick(
-            exchange=instrument.exchange,
-            symbol=instrument.symbol,
-            token=instrument.token,
-            price=data["ltp"],
-            volume=data["volume"],
-            timestamp=data["timestamp"],
-        )
+        try:
+            CandleService.process_tick(
+                exchange=instrument.exchange,
+                symbol=instrument.symbol,
+                token=instrument.token,
+                price=data["ltp"],
+                volume=data["volume"],
+                timestamp=data["timestamp"],
+            )
 
-        print(f"Saved {instrument.symbol} to Redis.")
+            print("CandleService completed successfully.")
+
+        except Exception as e:
+            import traceback
+
+            print("\n" + "=" * 80)
+            print("CandleService Exception")
+            traceback.print_exc()
+            print("=" * 80)

@@ -24,7 +24,12 @@ class LiveCache:
 
         redis_client.set(
             f"{cls.PREFIX}:{token}",
-            json.dumps(data),
+            json.dumps(
+                {
+                    **data,
+                    "timestamp": data["timestamp"].isoformat(),
+                }
+            )
         )
 
     @classmethod

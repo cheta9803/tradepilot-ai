@@ -9,6 +9,7 @@ from app.strategy.api import router as strategy_router
 from app.watchlist.api import router as watchlist_router
 from app.live.api import router as live_router
 from app.candles.api import router as candles_router
+from app.candles.test_api import router as candles_test_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -21,3 +22,4 @@ api_router.include_router(strategy_router)
 api_router.include_router(watchlist_router)
 api_router.include_router(live_router)
 api_router.include_router(candles_router)
+api_router.include_router(candles_test_router)

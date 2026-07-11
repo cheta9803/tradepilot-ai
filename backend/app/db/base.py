@@ -8,3 +8,4 @@ class Base(DeclarativeBase):
 from app.users.models import User
 from app.watchlist.models import Watchlist
 from app.instruments.models import Instrument
+from app.candles.db_models import CandleModel

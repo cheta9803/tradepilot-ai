@@ -1,4 +1,5 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from app.instruments.models import Instrument
 
@@ -11,6 +12,30 @@ class LiveParser:
         instrument: Instrument,
     ) -> dict:
 
+        exchange_timestamp = message.get("exchange_timestamp")
+
+        print("=" * 80)
+        print("RAW exchange_timestamp:", exchange_timestamp)
+
+        print(
+            "Unix interpretation:",
+            datetime.fromtimestamp(exchange_timestamp / 1000),
+        )
+
+        print("=" * 80)
+
+        if exchange_timestamp:
+
+            timestamp = datetime.now(
+                ZoneInfo("Asia/Kolkata"),
+            )
+
+        else:
+
+            timestamp = datetime.now(
+                ZoneInfo("Asia/Kolkata"),
+            )
+
         return {
             "exchange": instrument.exchange,
             "symbol": instrument.symbol,
@@ -22,5 +47,5 @@ class LiveParser:
             "low": message.get("low_price_of_the_day", 0) / 100,
             "close": message.get("closed_price", 0) / 100,
             "volume": message.get("volume_trade_for_the_day", 0),
-            "timestamp": datetime.utcnow(),
+            "timestamp": timestamp,
         }

@@ -3,6 +3,11 @@ from datetime import datetime
 from app.candles.builder import CandleBuilder
 from app.candles.models import Candle
 from app.candles.redis_cache import CandleCache
+from app.candles.persistence import CandlePersistence
+
+from app.candles.repository import CandleRepository
+
+from app.db.session import SessionLocal
 
 
 class CandleService:
@@ -57,7 +62,27 @@ class CandleService:
                 candle_time,
             )
 
+
+        print("=" * 60)
+        print("Current Candle :", candle_time)
+        print("Incoming Minute:", minute)
+        print("Minute Changed :", candle_time != minute)
+        print("=" * 60)
+
         if candle_time != minute:
+            print("Saving candle to PostgreSQL...")
+            db = SessionLocal()
+
+            try:
+
+                CandleRepository.save(
+                    db=db,
+                    candle=candle,
+                )
+
+            finally:
+
+                db.close()
 
             candle = CandleBuilder.create(
                 exchange=exchange,
