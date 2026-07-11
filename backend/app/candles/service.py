@@ -62,15 +62,7 @@ class CandleService:
                 candle_time,
             )
 
-
-        print("=" * 60)
-        print("Current Candle :", candle_time)
-        print("Incoming Minute:", minute)
-        print("Minute Changed :", candle_time != minute)
-        print("=" * 60)
-
         if candle_time != minute:
-            print("Saving candle to PostgreSQL...")
             db = SessionLocal()
 
             try:

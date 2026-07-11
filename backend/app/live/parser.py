@@ -14,16 +14,6 @@ class LiveParser:
 
         exchange_timestamp = message.get("exchange_timestamp")
 
-        print("=" * 80)
-        print("RAW exchange_timestamp:", exchange_timestamp)
-
-        print(
-            "Unix interpretation:",
-            datetime.fromtimestamp(exchange_timestamp / 1000),
-        )
-
-        print("=" * 80)
-
         if exchange_timestamp:
 
             timestamp = datetime.now(

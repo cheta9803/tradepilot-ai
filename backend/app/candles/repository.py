@@ -22,7 +22,6 @@ class CandleRepository:
             )
             .first()
         )
-        print("Repository.save() called")
 
         if db_candle is None:
 
@@ -49,7 +48,6 @@ class CandleRepository:
             db_candle.volume = candle.volume
 
         db.commit()
-        print("Commit successful")
         db.refresh(db_candle)
 
         return db_candle
