@@ -27,10 +27,9 @@ class CandleService:
             microsecond=0,
         )
 
-        candle = CandleCache.get(
+        candle = CandleService._get_current_candle(
             exchange=exchange,
             token=token,
-            timeframe=CandleService.TIMEFRAME,
         )
 
         if candle is None:
@@ -76,6 +75,56 @@ class CandleService:
     ) -> bool:
 
         return candle.timestamp != minute
+
+    @staticmethod
+    def _get_current_candle(
+        *,
+        exchange: str,
+        token: str,
+    ) -> Candle | None:
+
+        candle = CandleCache.get(
+            exchange=exchange,
+            token=token,
+            timeframe=CandleService.TIMEFRAME,
+        )
+
+        if candle is not None:
+            return candle
+
+        db = SessionLocal()
+
+        try:
+
+            entity = CandleRepository.get_latest(
+                db=db,
+                exchange=exchange,
+                token=token,
+                timeframe=CandleService.TIMEFRAME,
+            )
+
+        finally:
+            db.close()
+
+        if entity is None:
+            return None
+
+        candle = Candle(
+            exchange=entity.exchange,
+            symbol=entity.symbol,
+            token=entity.token,
+            timeframe=entity.timeframe,
+            timestamp=entity.timestamp,
+            open=entity.open,
+            high=entity.high,
+            low=entity.low,
+            close=entity.close,
+            volume=entity.volume,
+        )
+
+        CandleCache.save(candle)
+
+        return candle
 
     @staticmethod
     def _create_new_candle(

@@ -51,3 +51,25 @@ class CandleRepository:
         db.refresh(db_candle)
 
         return db_candle
+
+    @staticmethod
+    def get_latest(
+        *,
+        db: Session,
+        exchange: str,
+        token: str,
+        timeframe: str,
+    ):
+
+        return (
+            db.query(CandleEntity)
+            .filter(
+                CandleEntity.exchange == exchange,
+                CandleEntity.token == token,
+                CandleEntity.timeframe == timeframe,
+            )
+            .order_by(
+                CandleEntity.timestamp.desc()
+            )
+            .first()
+        )
