@@ -1,17 +1,29 @@
-from app.indicators.calculators.ema import EMACalculator
-from app.indicators.calculators.sma import SMACalculator
-from app.indicators.calculators.rsi import RSICalculator
-from app.indicators.calculators.vwap import VWAPCalculator
 from app.indicators.calculators.atr import ATRCalculator
+from app.indicators.calculators.ema import EMACalculator
 from app.indicators.calculators.macd import MACDCalculator
-
-from app.market.service import MarketService
+from app.indicators.calculators.rsi import RSICalculator
+from app.indicators.calculators.sma import SMACalculator
+from app.indicators.calculators.vwap import VWAPCalculator
+from app.indicators.repository import IndicatorRepository
 
 
 class IndicatorService:
 
     def __init__(self):
-        self.market_service = MarketService()
+
+        self.repository = IndicatorRepository()
+
+    def _get_candles(
+        self,
+        *,
+        symbol: str,
+        timeframe: str,
+    ):
+
+        return self.repository.get_candles(
+            symbol=symbol,
+            timeframe=timeframe,
+        )
 
     def calculate_ema(
         self,
@@ -20,10 +32,9 @@ class IndicatorService:
         period: int,
     ):
 
-        candles = self.market_service.get_history(
+        candles = self._get_candles(
             symbol=symbol,
             timeframe=timeframe,
-            limit=max(period * 3, period + 1),
         )
 
         value = EMACalculator.calculate(
@@ -45,10 +56,9 @@ class IndicatorService:
         period: int,
     ):
 
-        candles = self.market_service.get_history(
+        candles = self._get_candles(
             symbol=symbol,
             timeframe=timeframe,
-            limit=max(period * 3, period + 1),
         )
 
         value = SMACalculator.calculate(
@@ -69,10 +79,10 @@ class IndicatorService:
         timeframe: str,
         period: int,
     ):
-        candles = self.market_service.get_history(
+
+        candles = self._get_candles(
             symbol=symbol,
             timeframe=timeframe,
-            limit=period + 20,
         )
 
         value = RSICalculator.calculate(
@@ -86,19 +96,21 @@ class IndicatorService:
             "period": period,
             "rsi": value,
         }
-    
+
     def calculate_vwap(
         self,
         symbol: str,
         timeframe: str,
     ):
-        candles = self.market_service.get_history(
+
+        candles = self._get_candles(
             symbol=symbol,
             timeframe=timeframe,
-            limit=100,
         )
 
-        value = VWAPCalculator.calculate(candles)
+        value = VWAPCalculator.calculate(
+            candles,
+        )
 
         return {
             "symbol": symbol,
@@ -112,10 +124,10 @@ class IndicatorService:
         timeframe: str,
         period: int,
     ):
-        candles = self.market_service.get_history(
+
+        candles = self._get_candles(
             symbol=symbol,
             timeframe=timeframe,
-            limit=period + 20,
         )
 
         value = ATRCalculator.calculate(
@@ -135,10 +147,10 @@ class IndicatorService:
         symbol: str,
         timeframe: str,
     ):
-        candles = self.market_service.get_history(
+
+        candles = self._get_candles(
             symbol=symbol,
             timeframe=timeframe,
-            limit=60,
         )
 
         result = MACDCalculator.calculate(

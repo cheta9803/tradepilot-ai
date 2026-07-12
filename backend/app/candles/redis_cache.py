@@ -1,7 +1,7 @@
 import json
 
 from app.candles.models import Candle
-from app.live.redis_cache import redis_client
+from app.db.redis import redis_client
 from datetime import datetime
 
 

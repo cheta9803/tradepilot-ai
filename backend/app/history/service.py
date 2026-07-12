@@ -1,6 +1,5 @@
-from datetime import datetime, timedelta
-
 from app.history.client import HistoryClient
+from app.history.date_utils import HistoryDateUtils
 
 
 class HistoryService:
@@ -15,14 +14,14 @@ class HistoryService:
         token: str,
     ) -> list[dict]:
 
-        now = datetime.now()
-
-        from_date = now - timedelta(days=1)
+        from_date, to_date = (
+            HistoryDateUtils.get_history_range()
+        )
 
         return HistoryClient.get_candles(
             exchange=exchange,
             symbol_token=token,
             interval=cls.INTERVAL,
             from_date=from_date,
-            to_date=now,
+            to_date=to_date,
         )

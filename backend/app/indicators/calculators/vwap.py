@@ -1,4 +1,4 @@
-from app.market.models import Candle
+from app.candles.models import Candle
 
 
 class VWAPCalculator:

@@ -39,4 +39,6 @@ class HistoryClient:
                 )
             )
 
+        print(f"History API returned {len(response['data'] or [])} candles")
+
         return response["data"] or []
