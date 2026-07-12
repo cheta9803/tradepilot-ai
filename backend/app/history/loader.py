@@ -66,10 +66,6 @@ class HistoryLoader:
             candles=candles,
         )
 
-        CandleCache.save(
-            candles[-1],
-        )
-
         print(
             f"Loaded {len(candles)} candles for "
             f"{instrument.symbol}"
