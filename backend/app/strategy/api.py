@@ -17,7 +17,7 @@ service = StrategyService()
 )
 async def intraday(
     symbol: str,
-    timeframe: str = Query(default="5m"),
+    timeframe: str = Query(default="1m"),
 ):
     return service.analyze(
         symbol=symbol.upper(),

@@ -1,62 +1,88 @@
-from app.indicators.calculators.atr import ATRCalculator
-from app.indicators.calculators.ema import EMACalculator
-from app.indicators.calculators.macd import MACDCalculator
-from app.indicators.calculators.rsi import RSICalculator
-from app.indicators.calculators.vwap import VWAPCalculator
-from app.market.service import MarketService
+from app.indicators.cache import IndicatorCache
+from app.instruments.cache import InstrumentCache
+from app.live.redis_cache import LiveCache
 from app.strategy.rules import StrategyRules
 
 
 class StrategyService:
 
-    def __init__(self):
-        self.market_service = MarketService()
-
     def analyze(
         self,
         symbol: str,
-        timeframe: str = "5m",
+        timeframe: str = "1m",
     ):
-        candles = self.market_service.get_history(
+
+        instrument = InstrumentCache.get_by_symbol(
+            exchange="NSE",
             symbol=symbol,
-            timeframe=timeframe,
-            limit=100,
         )
 
-        latest_price = candles[-1].close
+        if instrument is None:
+            raise ValueError(
+                f"Instrument not found: {symbol}"
+            )
 
-        ema20 = EMACalculator.calculate(candles, 20)
-        ema50 = EMACalculator.calculate(candles, 50)
+        indicators = IndicatorCache.get(
+            exchange=instrument.exchange,
+            token=instrument.token,
+            timeframe=timeframe,
+        )
 
-        rsi = RSICalculator.calculate(candles, 14)
+        if indicators is None:
+            raise ValueError(
+                "Indicators not available."
+            )
 
-        vwap = VWAPCalculator.calculate(candles)
+        live = LiveCache.get(
+            instrument.token,
+        )
 
-        atr = ATRCalculator.calculate(candles, 14)
+        if live is None:
+            raise ValueError(
+                "Live price not available."
+            )
 
-        macd_result = MACDCalculator.calculate(candles)
+        latest_price = live["ltp"]
 
         signal, confidence, reasons = StrategyRules.evaluate(
-            ema20=ema20,
-            ema50=ema50,
-            rsi=rsi,
+            ema20=indicators["ema20"],
+            rsi=indicators["rsi14"],
             price=latest_price,
-            vwap=vwap,
-            macd=macd_result["macd"],
-            signal=macd_result["signal"],
+            vwap=indicators["vwap"],
+            macd=indicators["macd"],
+            signal=indicators["signal"],
         )
 
-        stop_loss = round(latest_price - atr, 2)
-        target = round(latest_price + (atr * 2), 2)
+        atr = indicators["atr14"]
+
+        stop_loss = round(
+            latest_price - atr,
+            2,
+        )
+
+        target = round(
+            latest_price + (atr * 2),
+            2,
+        )
 
         return {
             "symbol": symbol,
             "timeframe": timeframe,
+
             "signal": signal,
             "confidence": confidence,
+
             "entry": latest_price,
             "stop_loss": stop_loss,
             "target": target,
             "risk_reward": 2.0,
+
+            "ema20": indicators["ema20"],
+            "rsi14": indicators["rsi14"],
+            "atr14": indicators["atr14"],
+            "vwap": indicators["vwap"],
+            "macd": indicators["macd"],
+            "signal_line": indicators["signal"],
+
             "reasons": reasons,
         }

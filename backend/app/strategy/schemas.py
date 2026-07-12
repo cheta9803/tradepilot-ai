@@ -11,7 +11,13 @@ class StrategyResponse(BaseModel):
     entry: float
     stop_loss: float
     target: float
-
     risk_reward: float
+
+    ema20: float
+    rsi14: float
+    atr14: float
+    vwap: float
+    macd: float
+    signal_line: float
 
     reasons: list[str]

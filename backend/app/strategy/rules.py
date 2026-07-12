@@ -7,7 +7,6 @@ class StrategyRules:
     @staticmethod
     def evaluate(
         ema20: float,
-        ema50: float,
         rsi: float,
         price: float,
         vwap: float,
@@ -15,38 +14,53 @@ class StrategyRules:
         signal: float,
     ):
 
+        buy_score = 0
+        sell_score = 0
+
         reasons = []
-        score = 0
 
-        if ema20 > ema50:
-            reasons.append("EMA20 above EMA50")
-            score += 1
+        # Price vs EMA20
+        if price > ema20:
+            buy_score += 1
+            reasons.append("Price above EMA20")
+        elif price < ema20:
+            sell_score += 1
+            reasons.append("Price below EMA20")
 
+        # RSI
         if rsi > 55:
+            buy_score += 1
             reasons.append("RSI above 55")
-            score += 1
+        elif rsi < 45:
+            sell_score += 1
+            reasons.append("RSI below 45")
 
+        # VWAP
         if price > vwap:
+            buy_score += 1
             reasons.append("Price above VWAP")
-            score += 1
+        elif price < vwap:
+            sell_score += 1
+            reasons.append("Price below VWAP")
 
+        # MACD
         if macd > signal:
+            buy_score += 1
             reasons.append("MACD above Signal")
-            score += 1
+        elif macd < signal:
+            sell_score += 1
+            reasons.append("MACD below Signal")
 
-        if score == 4:
+        if buy_score == 4:
             trade_signal = StrategyRules.BUY
-        elif score == 0:
+            confidence = 90
+
+        elif sell_score == 4:
             trade_signal = StrategyRules.SELL
+            confidence = 90
+
         else:
             trade_signal = StrategyRules.HOLD
-
-        confidence = {
-            4: 90,
-            3: 75,
-            2: 60,
-            1: 40,
-            0: 20,
-        }[score]
+            confidence = 50
 
         return trade_signal, confidence, reasons

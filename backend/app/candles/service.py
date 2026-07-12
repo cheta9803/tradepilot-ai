@@ -52,18 +52,12 @@ class CandleService:
             minute=minute,
         ):
 
-            print(">>> Candle Closed")
-
             HistoryCache.append(candle)
-
-            print(">>> Calculating Indicators")
 
             IndicatorEngine.calculate(
                 symbol=symbol,
                 timeframe=CandleService.TIMEFRAME,
             )
-
-            print(">>> Indicators Updated")
 
             CandleService._create_new_candle(
                 exchange=exchange,
@@ -152,9 +146,6 @@ class CandleService:
         volume: int,
     ) -> None:
 
-        print(
-            f">>> Creating new candle for {symbol} at {minute}"
-        )
         candle = CandleBuilder.create(
             exchange=exchange,
             symbol=symbol,
@@ -180,10 +171,6 @@ class CandleService:
             and candle.volume == volume
         ):
             return
-
-        print(
-            f">>> Updating candle {candle.symbol}"
-        )
 
         candle = CandleBuilder.update(
             candle,
