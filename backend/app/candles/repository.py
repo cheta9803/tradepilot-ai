@@ -62,14 +62,51 @@ class CandleRepository:
     ):
 
         return (
-            db.query(CandleEntity)
+            db.query(CandleModel)
             .filter(
-                CandleEntity.exchange == exchange,
-                CandleEntity.token == token,
-                CandleEntity.timeframe == timeframe,
+                CandleModel.exchange == exchange,
+                CandleModel.token == token,
+                CandleModel.timeframe == timeframe,
             )
             .order_by(
-                CandleEntity.timestamp.desc()
+                CandleModel.timestamp.desc()
             )
             .first()
         )
+
+    @staticmethod
+    def load_recent(
+        *,
+        db: Session,
+        limit: int,
+    ) -> list[Candle]:
+
+        rows = (
+            db.query(CandleModel)
+            .order_by(
+                CandleModel.timestamp.desc()
+            )
+            .limit(limit)
+            .all()
+        )
+
+        candles = []
+
+        for row in reversed(rows):
+
+            candles.append(
+                Candle(
+                    exchange=row.exchange,
+                    symbol=row.symbol,
+                    token=row.token,
+                    timeframe=row.timeframe,
+                    timestamp=row.timestamp,
+                    open=row.open,
+                    high=row.high,
+                    low=row.low,
+                    close=row.close,
+                    volume=row.volume,
+                )
+            )
+
+        return candles

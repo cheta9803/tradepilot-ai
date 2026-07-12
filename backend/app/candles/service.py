@@ -5,6 +5,7 @@ from app.candles.models import Candle
 from app.candles.redis_cache import CandleCache
 from app.candles.repository import CandleRepository
 from app.db.session import SessionLocal
+from app.history.redis_cache import HistoryCache
 
 
 class CandleService:
@@ -49,6 +50,11 @@ class CandleService:
             candle=candle,
             minute=minute,
         ):
+
+            # Archive the completed candle.
+            # HistoryCache.append() replaces the last candle if the
+            # timestamp already exists, so startup history won't be duplicated.
+            HistoryCache.append(candle)
 
             CandleService._create_new_candle(
                 exchange=exchange,
@@ -175,9 +181,12 @@ class CandleService:
         db = SessionLocal()
 
         try:
+
             CandleRepository.save(
                 db=db,
                 candle=candle,
             )
+
         finally:
+
             db.close()
