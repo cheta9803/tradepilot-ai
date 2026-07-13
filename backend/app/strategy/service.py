@@ -2,6 +2,7 @@ from app.indicators.cache import IndicatorCache
 from app.instruments.cache import InstrumentCache
 from app.live.redis_cache import LiveCache
 from app.strategy.rules import StrategyRules
+from app.strategy.trend import TrendService
 
 
 class StrategyService:
@@ -44,6 +45,11 @@ class StrategyService:
 
         latest_price = live["ltp"]
 
+        trend = TrendService.evaluate(
+            ema20=indicators["ema20"],
+            ema50=indicators["ema50"],
+        )
+
         signal, confidence, reasons = StrategyRules.evaluate(
             ema20=indicators["ema20"],
             rsi=indicators["rsi14"],
@@ -52,6 +58,23 @@ class StrategyService:
             macd=indicators["macd"],
             signal=indicators["signal"],
         )
+
+        # Trend Filter
+        if trend == "UPTREND" and signal == StrategyRules.SELL:
+            signal = StrategyRules.HOLD
+            confidence = 50
+            reasons.append(
+                "SELL ignored because overall trend is UPTREND"
+            )
+
+        elif trend == "DOWNTREND" and signal == StrategyRules.BUY:
+            signal = StrategyRules.HOLD
+            confidence = 50
+            reasons.append(
+                "BUY ignored because overall trend is DOWNTREND"
+            )
+
+        tradable = signal != StrategyRules.HOLD
 
         atr = indicators["atr14"]
 
@@ -68,22 +91,20 @@ class StrategyService:
         return {
             "symbol": symbol,
             "timeframe": timeframe,
-
+            "trend": trend,
             "signal": signal,
             "confidence": confidence,
-            "tradable": signal != "HOLD",
-
+            "tradable": tradable,
             "entry": latest_price,
             "stop_loss": stop_loss,
             "target": target,
             "risk_reward": 2.0,
-
             "ema20": indicators["ema20"],
+            "ema50": indicators["ema50"],
             "rsi14": indicators["rsi14"],
             "atr14": indicators["atr14"],
             "vwap": indicators["vwap"],
             "macd": indicators["macd"],
             "signal_line": indicators["signal"],
-
             "reasons": reasons,
         }
