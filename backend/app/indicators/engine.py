@@ -11,7 +11,8 @@ from app.instruments.cache import InstrumentCache
 
 class IndicatorEngine:
 
-    EMA_PERIOD = 20
+    EMA_FAST_PERIOD = 20
+    EMA_SLOW_PERIOD = 50
     SMA_PERIOD = 20
     RSI_PERIOD = 14
     ATR_PERIOD = 14
@@ -24,12 +25,6 @@ class IndicatorEngine:
         timeframe: str,
     ) -> dict:
 
-        from datetime import datetime
-
-        print(
-            f">>> Indicator calculation at {datetime.now()}"
-        )
-
         repository = IndicatorRepository()
 
         candles = repository.get_candles(
@@ -37,22 +32,27 @@ class IndicatorEngine:
             timeframe=timeframe,
         )
 
-        ema = EMACalculator.calculate(
+        ema20 = EMACalculator.calculate(
             candles,
-            cls.EMA_PERIOD,
+            cls.EMA_FAST_PERIOD,
         )
 
-        sma = SMACalculator.calculate(
+        ema50 = EMACalculator.calculate(
+            candles,
+            cls.EMA_SLOW_PERIOD,
+        )
+
+        sma20 = SMACalculator.calculate(
             candles,
             cls.SMA_PERIOD,
         )
 
-        rsi = RSICalculator.calculate(
+        rsi14 = RSICalculator.calculate(
             candles,
             cls.RSI_PERIOD,
         )
 
-        atr = ATRCalculator.calculate(
+        atr14 = ATRCalculator.calculate(
             candles,
             cls.ATR_PERIOD,
         )
@@ -70,11 +70,17 @@ class IndicatorEngine:
             symbol=symbol,
         )
 
+        if instrument is None:
+            raise ValueError(
+                f"Instrument not found: {symbol}"
+            )
+
         values = {
-            "ema20": ema,
-            "sma20": sma,
-            "rsi14": rsi,
-            "atr14": atr,
+            "ema20": ema20,
+            "ema50": ema50,
+            "sma20": sma20,
+            "rsi14": rsi14,
+            "atr14": atr14,
             "vwap": vwap,
             **macd,
         }

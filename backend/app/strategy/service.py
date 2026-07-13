@@ -71,6 +71,7 @@ class StrategyService:
 
             "signal": signal,
             "confidence": confidence,
+            "tradable": signal != "HOLD",
 
             "entry": latest_price,
             "stop_loss": stop_loss,

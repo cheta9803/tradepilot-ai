@@ -8,9 +8,12 @@ class StrategyResponse(BaseModel):
     signal: str
     confidence: int
 
+    tradable: bool
+
     entry: float
     stop_loss: float
     target: float
+
     risk_reward: float
 
     ema20: float
