@@ -8,6 +8,8 @@ from app.db.session import SessionLocal
 from app.history.redis_cache import HistoryCache
 
 from app.indicators.engine import IndicatorEngine
+from app.timeframes.aggregator import TimeframeAggregator
+
 
 class CandleService:
 
@@ -53,6 +55,10 @@ class CandleService:
         ):
 
             HistoryCache.append(candle)
+
+            TimeframeAggregator.process(
+                candle,
+            )
 
             IndicatorEngine.calculate(
                 symbol=symbol,

@@ -56,3 +56,8 @@ class InstrumentCache:
                 symbol.upper(),
             )
         )
+
+    @classmethod
+    def get_all(cls) -> list[Instrument]:
+
+        return list(cls._token_map.values())

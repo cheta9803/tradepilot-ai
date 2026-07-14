@@ -1,12 +1,12 @@
 from sqlalchemy.orm import Session
 
+from app.candles.history_cache import HistoryCache
 from app.candles.repository import CandleRepository
-from app.candles.redis_cache import CandleCache
 
 
 class CandleHistoryLoader:
 
-    LIMIT = 200
+    LIMIT = 3000
 
     @staticmethod
     def load(
@@ -18,5 +18,43 @@ class CandleHistoryLoader:
             limit=CandleHistoryLoader.LIMIT,
         )
 
+        grouped: dict[
+            tuple[str, str, str],
+            list,
+        ] = {}
+
         for candle in candles:
-            CandleCache.save(candle)
+
+            key = (
+                candle.exchange,
+                candle.token,
+                candle.timeframe,
+            )
+
+            grouped.setdefault(
+                key,
+                [],
+            ).append(candle)
+
+        for (
+            exchange,
+            token,
+            timeframe,
+        ), candle_list in grouped.items():
+
+            candle_list.sort(
+                key=lambda candle: candle.timestamp,
+            )
+
+            HistoryCache.save(
+                exchange=exchange,
+                token=token,
+                timeframe=timeframe,
+                candles=candle_list,
+            )
+
+            print(
+                f"Loaded {len(candle_list)} "
+                f"historical candles "
+                f"for {exchange}:{token}:{timeframe}"
+            )

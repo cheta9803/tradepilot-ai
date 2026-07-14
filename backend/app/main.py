@@ -10,6 +10,7 @@ from app.core.logger import logger
 from app.db.session import SessionLocal
 from app.instruments.cache import InstrumentCache
 from app.live.instance import live_manager
+from app.history.rebuilder import HistoryRebuilder
 
 
 @asynccontextmanager
@@ -24,6 +25,10 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
+    # Build all higher timeframes from existing 1m history
+    HistoryRebuilder.rebuild()
+
+    # Start live websocket
     live_manager.start()
 
     logger.info("TradePilot AI started")

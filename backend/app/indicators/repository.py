@@ -1,11 +1,9 @@
+from app.candles.history_cache import HistoryCache
 from app.candles.models import Candle
-from app.history.redis_cache import HistoryCache
 from app.instruments.cache import InstrumentCache
 
 
 class IndicatorRepository:
-
-    TIMEFRAME = "1m"
 
     @staticmethod
     def get_candles(
@@ -32,7 +30,7 @@ class IndicatorRepository:
 
         if not candles:
             raise ValueError(
-                f"No candle history found for '{symbol}'."
+                f"No candle history found for '{symbol}' ({timeframe})."
             )
 
         return candles

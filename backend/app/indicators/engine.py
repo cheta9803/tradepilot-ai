@@ -23,7 +23,7 @@ class IndicatorEngine:
         *,
         symbol: str,
         timeframe: str,
-    ) -> dict:
+    ) -> dict | None:
 
         repository = IndicatorRepository()
 
@@ -31,6 +31,23 @@ class IndicatorEngine:
             symbol=symbol,
             timeframe=timeframe,
         )
+
+        required = max(
+            cls.EMA_SLOW_PERIOD,
+            cls.SMA_PERIOD,
+            cls.RSI_PERIOD,
+            cls.ATR_PERIOD,
+            35,  # enough for MACD
+        )
+
+        if len(candles) < required:
+            print(
+                f"Skipping indicators for "
+                f"{symbol} {timeframe}. "
+                f"Need {required} candles, "
+                f"have {len(candles)}."
+            )
+            return None
 
         ema20 = EMACalculator.calculate(
             candles,
