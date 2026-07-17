@@ -37,7 +37,7 @@ class IndicatorEngine:
             cls.SMA_PERIOD,
             cls.RSI_PERIOD,
             cls.ATR_PERIOD,
-            35,  # enough for MACD
+            35,
         )
 
         if len(candles) < required:
@@ -107,6 +107,14 @@ class IndicatorEngine:
             token=instrument.token,
             timeframe=timeframe,
             values=values,
+        )
+
+        from app.strategy.engine import StrategyEngine
+
+        StrategyEngine.calculate(
+            exchange=instrument.exchange,
+            token=instrument.token,
+            timeframe=timeframe,
         )
 
         return values

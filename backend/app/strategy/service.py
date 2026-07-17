@@ -1,6 +1,8 @@
 from app.indicators.cache import IndicatorCache
 from app.instruments.cache import InstrumentCache
 from app.live.redis_cache import LiveCache
+from app.strategy.cache import StrategyCache
+from app.strategy.risk import RiskManager
 from app.strategy.rules import StrategyRules
 from app.strategy.trend import TrendService
 
@@ -59,15 +61,14 @@ class StrategyService:
             signal=indicators["signal"],
         )
 
-        # Trend Filter
-        if trend == "UPTREND" and signal == StrategyRules.SELL:
+        if trend == TrendService.UPTREND and signal == StrategyRules.SELL:
             signal = StrategyRules.HOLD
             confidence = 50
             reasons.append(
                 "SELL ignored because overall trend is UPTREND"
             )
 
-        elif trend == "DOWNTREND" and signal == StrategyRules.BUY:
+        elif trend == TrendService.DOWNTREND and signal == StrategyRules.BUY:
             signal = StrategyRules.HOLD
             confidence = 50
             reasons.append(
@@ -76,19 +77,13 @@ class StrategyService:
 
         tradable = signal != StrategyRules.HOLD
 
-        atr = indicators["atr14"]
-
-        stop_loss = round(
-            latest_price - atr,
-            2,
+        stop_loss, target = RiskManager.calculate(
+            signal=signal,
+            entry=latest_price,
+            atr=indicators["atr14"],
         )
 
-        target = round(
-            latest_price + (atr * 2),
-            2,
-        )
-
-        return {
+        result = {
             "symbol": symbol,
             "timeframe": timeframe,
             "trend": trend,
@@ -108,3 +103,12 @@ class StrategyService:
             "signal_line": indicators["signal"],
             "reasons": reasons,
         }
+
+        StrategyCache.save(
+            exchange=instrument.exchange,
+            token=instrument.token,
+            timeframe=timeframe,
+            values=result,
+        )
+
+        return result
