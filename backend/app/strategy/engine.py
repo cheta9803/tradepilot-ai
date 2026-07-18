@@ -8,6 +8,8 @@ from app.strategy.rules import StrategyRules
 from app.strategy.state import TradeState
 from app.strategy.trend import TrendService
 
+from app.trades.lifecycle import TradeLifecycle
+
 
 class StrategyEngine:
 
@@ -117,6 +119,19 @@ class StrategyEngine:
                 "risk_amount": position["risk_amount"],
                 "reasons": reasons,
             },
+        )
+
+        TradeLifecycle.create(
+            exchange=exchange,
+            token=token,
+            symbol=instrument.symbol,
+            timeframe=timeframe,
+            signal=signal,
+            state=state,
+            entry=entry,
+            stop_loss=stop_loss,
+            target=target,
+            quantity=position["quantity"],
         )
 
         print(

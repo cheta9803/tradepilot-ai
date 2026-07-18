@@ -1,9 +1,15 @@
 class TradeState:
 
     WAIT = "WAIT"
-    READY = "READY"
-    BUY = "BUY"
-    SELL = "SELL"
+
+    ENTRY_READY = "ENTRY_READY"
+
+    BUY_ACTIVE = "BUY_ACTIVE"
+    SELL_ACTIVE = "SELL_ACTIVE"
+
+    TARGET_HIT = "TARGET_HIT"
+    STOPLOSS_HIT = "STOPLOSS_HIT"
+
     EXIT = "EXIT"
 
     @classmethod
@@ -19,17 +25,9 @@ class TradeState:
             return cls.WAIT
 
         if signal == "BUY":
-
-            if trend == "UPTREND":
-                return cls.BUY
-
-            return cls.READY
+            return cls.ENTRY_READY
 
         if signal == "SELL":
-
-            if trend == "DOWNTREND":
-                return cls.SELL
-
-            return cls.READY
+            return cls.ENTRY_READY
 
         return cls.WAIT
