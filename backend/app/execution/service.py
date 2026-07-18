@@ -4,6 +4,8 @@ from app.live.redis_cache import LiveCache
 from app.trades.lifecycle import TradeLifecycle
 from app.trades.service import TradeService
 
+from app.execution.eod import EndOfDayService
+
 
 class ExecutionService:
 
@@ -45,6 +47,9 @@ class ExecutionService:
                     ltp,
                 )
 
+        # Run once after processing all trades
+        EndOfDayService.square_off()
+        
     @classmethod
     def _update_live_pnl(
         cls,

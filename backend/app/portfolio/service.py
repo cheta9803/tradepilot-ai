@@ -1,10 +1,9 @@
+from app.core.config import settings
 from app.portfolio.models import Portfolio
 from app.trades.service import TradeService
 
 
 class PortfolioService:
-
-    DEFAULT_CAPITAL = 100000.0
 
     @classmethod
     def summary(cls) -> Portfolio:
@@ -14,6 +13,7 @@ class PortfolioService:
         invested = 0.0
         open_positions = 0
         closed_positions = 0
+
         realized_pnl = 0.0
         unrealized_pnl = 0.0
 
@@ -22,9 +22,9 @@ class PortfolioService:
             state = trade["state"]
 
             if state in (
+                "ENTRY_READY",
                 "BUY_ACTIVE",
                 "SELL_ACTIVE",
-                "ENTRY_READY",
             ):
 
                 invested += (
@@ -34,14 +34,22 @@ class PortfolioService:
 
                 open_positions += 1
 
+                unrealized_pnl += trade.get(
+                    "pnl",
+                    0.0,
+                )
+
             elif state == "EXIT":
 
                 closed_positions += 1
 
-                realized_pnl += trade["pnl"]
+                realized_pnl += trade.get(
+                    "pnl",
+                    0.0,
+                )
 
         available = (
-            cls.DEFAULT_CAPITAL
+            settings.default_capital
             - invested
         )
 
@@ -51,7 +59,7 @@ class PortfolioService:
         )
 
         return Portfolio(
-            capital=cls.DEFAULT_CAPITAL,
+            capital=settings.default_capital,
             invested=round(invested, 2),
             available=round(available, 2),
             open_positions=open_positions,

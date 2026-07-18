@@ -1,3 +1,5 @@
+from app.core.config import settings
+
 from app.indicators.cache import IndicatorCache
 from app.instruments.cache import InstrumentCache
 from app.live.redis_cache import LiveCache
@@ -14,8 +16,6 @@ from app.execution.engine import ExecutionEngine
 
 
 class StrategyEngine:
-
-    DEFAULT_CAPITAL = 100000
 
     @classmethod
     def calculate(
@@ -88,7 +88,7 @@ class StrategyEngine:
         )
 
         position = PositionSizer.calculate(
-            capital=cls.DEFAULT_CAPITAL,
+            capital=settings.default_capital,
             entry=entry,
             stop_loss=stop_loss,
         )
@@ -123,20 +123,22 @@ class StrategyEngine:
             },
         )
 
-        TradeLifecycle.create(
-            exchange=exchange,
-            token=token,
-            symbol=instrument.symbol,
-            timeframe=timeframe,
-            signal=signal,
-            state=state,
-            entry=entry,
-            stop_loss=stop_loss,
-            target=target,
-            quantity=position["quantity"],
-        )
+        if state == TradeState.ENTRY_READY:
 
-        ExecutionEngine.process()
+            TradeLifecycle.create(
+                exchange=exchange,
+                token=token,
+                symbol=instrument.symbol,
+                timeframe=timeframe,
+                signal=signal,
+                state=state,
+                entry=entry,
+                stop_loss=stop_loss,
+                target=target,
+                quantity=position["quantity"],
+            )
+
+            ExecutionEngine.process()
 
         print(
             f"Strategy updated "
