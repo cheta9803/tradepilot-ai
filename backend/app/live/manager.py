@@ -1,9 +1,10 @@
+from app.candles.service import CandleService
 from app.instruments.cache import InstrumentCache
 from app.live.client import LiveClient
 from app.live.parser import LiveParser
 from app.live.redis_cache import LiveCache
+from app.trades.monitor import TradeMonitor
 from app.watchlist.startup import WatchlistStartup
-from app.candles.service import CandleService
 
 
 class LiveManager:
@@ -110,9 +111,14 @@ class LiveManager:
         ws,
         message,
     ):
-        token = str(message.get("token"))
 
-        instrument = InstrumentCache.get_by_token(token)
+        token = str(
+            message.get("token")
+        )
+
+        instrument = InstrumentCache.get_by_token(
+            token
+        )
 
         if instrument is None:
             return
@@ -135,3 +141,13 @@ class LiveManager:
             volume=data["volume"],
             timestamp=data["timestamp"],
         )
+
+        for timeframe in (
+            "1m",
+            "5m",
+        ):
+            TradeMonitor.update(
+                exchange=instrument.exchange,
+                token=instrument.token,
+                timeframe=timeframe,
+            )

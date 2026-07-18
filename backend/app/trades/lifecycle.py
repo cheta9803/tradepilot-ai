@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 
 from app.db.redis import redis_client
 from app.trades.cache import TradeCache
@@ -57,8 +58,35 @@ class TradeLifecycle:
         if trade is None:
             return
 
+        previous_state = trade["state"]
+
         trade.update(values)
-        trade["updated_at"] = datetime.now().isoformat()
+
+        current_state = trade["state"]
+
+        now = datetime.now().isoformat()
+
+        if (
+            previous_state == "ENTRY_READY"
+            and current_state in (
+                "BUY_ACTIVE",
+                "SELL_ACTIVE",
+            )
+            and trade["opened_at"] is None
+        ):
+            trade["opened_at"] = now
+
+        if (
+            current_state in (
+                "TARGET_HIT",
+                "STOPLOSS_HIT",
+            )
+            and trade["closed_at"] is None
+        ):
+            trade["closed_at"] = now
+            trade["state"] = "EXIT"
+
+        trade["updated_at"] = now
 
         redis_client.set(
             TradeCache._key(
@@ -66,5 +94,5 @@ class TradeLifecycle:
                 token,
                 timeframe,
             ),
-            __import__("json").dumps(trade),
+            json.dumps(trade),
         )
