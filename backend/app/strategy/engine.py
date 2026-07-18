@@ -10,6 +10,8 @@ from app.strategy.trend import TrendService
 
 from app.trades.lifecycle import TradeLifecycle
 
+from app.execution.engine import ExecutionEngine
+
 
 class StrategyEngine:
 
@@ -133,6 +135,8 @@ class StrategyEngine:
             target=target,
             quantity=position["quantity"],
         )
+
+        ExecutionEngine.process()
 
         print(
             f"Strategy updated "

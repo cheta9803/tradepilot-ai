@@ -87,7 +87,7 @@ class TradeCache:
         if value is None:
             return None
 
-        return json.loads(value)
+        return cls.deserialize(value)
 
     @classmethod
     def delete(
@@ -105,3 +105,14 @@ class TradeCache:
                 timeframe,
             )
         )
+
+    @classmethod
+    def deserialize(
+        cls,
+        value: str | bytes,
+    ) -> dict:
+
+        if isinstance(value, bytes):
+            value = value.decode()
+
+        return json.loads(value)

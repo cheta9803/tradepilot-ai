@@ -32,16 +32,6 @@ class TradeMonitor:
 
         state = trade["state"]
 
-        if state == "ENTRY_READY":
-
-            if trade["signal"] == "BUY":
-                trade["state"] = "BUY_ACTIVE"
-
-            elif trade["signal"] == "SELL":
-                trade["state"] = "SELL_ACTIVE"
-
-            state = trade["state"]
-
         if state in (
             "BUY_ACTIVE",
             "SELL_ACTIVE",

@@ -8,9 +8,10 @@ from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logger import logger
 from app.db.session import SessionLocal
+from app.execution.manager import ExecutionManager
+from app.history.rebuilder import HistoryRebuilder
 from app.instruments.cache import InstrumentCache
 from app.live.instance import live_manager
-from app.history.rebuilder import HistoryRebuilder
 
 
 @asynccontextmanager
@@ -25,8 +26,11 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
-    # Build all higher timeframes from existing 1m history
+    # Build all higher timeframes from existing history
     HistoryRebuilder.rebuild()
+
+    # Start execution worker
+    ExecutionManager.start()
 
     # Start live websocket
     live_manager.start()
@@ -35,6 +39,10 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    # Stop execution worker
+    ExecutionManager.stop()
+
+    # Stop live websocket
     live_manager.stop()
 
     logger.info("TradePilot AI stopped")
