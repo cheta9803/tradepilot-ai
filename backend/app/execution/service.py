@@ -6,6 +6,8 @@ from app.trades.service import TradeService
 
 from app.execution.eod import EndOfDayService
 
+from app.risk.engine import RiskEngine
+
 
 class ExecutionService:
 
@@ -40,6 +42,11 @@ class ExecutionService:
                 cls._update_live_pnl(
                     trade,
                     ltp,
+                )
+
+                RiskEngine.process(
+                    trade=trade,
+                    ltp=ltp,
                 )
 
                 cls._process_exit(

@@ -55,6 +55,22 @@ class Settings(BaseSettings):
 
     market_close_minute: int = 20
 
+    trailing_stop_enabled: bool = True
+
+    trailing_atr_multiplier: float = 1.0
+
+    breakeven_enabled: bool = True
+
+    breakeven_atr_multiplier: float = 1.0
+
+    max_open_trades: int = 5
+
+    max_daily_loss: float = 2000.0
+
+    cooldown_after_losses: int = 3
+
+    cooldown_minutes: int = 30
+
     # -------------------------------------------------
 
     model_config = SettingsConfigDict(
