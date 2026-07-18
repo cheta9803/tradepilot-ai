@@ -1,49 +1,48 @@
 import threading
 import time
 
-from app.execution.engine import ExecutionEngine
+from app.execution.service import ExecutionService
 
 
 class ExecutionManager:
 
-    _running = False
-    _thread = None
+    def __init__(self):
 
-    @classmethod
-    def start(cls) -> None:
+        self.running = False
+        self.thread = None
 
-        if cls._running:
+    def start(self):
+
+        if self.running:
             return
 
-        cls._running = True
+        self.running = True
 
-        cls._thread = threading.Thread(
-            target=cls._worker,
+        self.thread = threading.Thread(
+            target=self.run,
             daemon=True,
         )
 
-        cls._thread.start()
+        self.thread.start()
 
         print("Execution Manager Started")
 
-    @classmethod
-    def stop(cls) -> None:
+    def stop(self):
 
-        cls._running = False
+        self.running = False
 
-        print("Execution Manager Stopped")
+    def run(self):
 
-    @classmethod
-    def _worker(cls) -> None:
-
-        while cls._running:
+        while self.running:
 
             try:
-                ExecutionEngine.process()
 
-            except Exception as ex:
+                ExecutionService.process()
+
+            except Exception as e:
+
                 print(
-                    f"Execution Manager Error: {ex}"
+                    f"Execution Manager Error: {e}"
                 )
 
             time.sleep(1)

@@ -1,8 +1,9 @@
 from app.history.redis_cache import HistoryCache
+from app.indicators.engine import IndicatorEngine
 from app.instruments.cache import InstrumentCache
+from app.strategy.engine import StrategyEngine
 from app.timeframes.builder import TimeframeBuilder
 from app.timeframes.config import TIMEFRAMES
-from app.indicators.engine import IndicatorEngine
 
 
 class HistoryRebuilder:
@@ -55,15 +56,29 @@ class HistoryRebuilder:
                 )
 
                 try:
+
                     IndicatorEngine.calculate(
                         symbol=instrument.symbol,
                         timeframe=timeframe,
                     )
-                except Exception:
-                    pass
+
+                    StrategyEngine.calculate(
+                        exchange=instrument.exchange,
+                        token=instrument.token,
+                        timeframe=timeframe,
+                    )
+
+                except Exception as e:
+
+                    print(
+                        f"Rebuild error "
+                        f"{instrument.symbol} "
+                        f"{timeframe}: {e}"
+                    )
 
                 print(
-                    f"Rebuilt {instrument.symbol} "
+                    f"Rebuilt "
+                    f"{instrument.symbol} "
                     f"{timeframe} "
                     f"{len(candles_tf)} candles"
                 )

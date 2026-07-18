@@ -1,6 +1,7 @@
-class PositionSizer:
+from app.strategy.risk import RiskManager
 
-    DEFAULT_RISK_PERCENT = 1.0
+
+class PositionSizer:
 
     @classmethod
     def calculate(
@@ -9,25 +10,44 @@ class PositionSizer:
         capital: float,
         entry: float,
         stop_loss: float,
-        risk_percent: float = DEFAULT_RISK_PERCENT,
     ) -> dict:
 
-        risk_amount = capital * (risk_percent / 100)
+        risk_amount = RiskManager.risk_amount(capital)
 
-        risk_per_share = abs(entry - stop_loss)
+        risk_per_share = abs(
+            entry - stop_loss
+        )
 
         if risk_per_share <= 0:
-            quantity = 0
-        else:
-            quantity = int(risk_amount / risk_per_share)
 
-        invested = round(quantity * entry, 2)
+            return {
+                "quantity": 0,
+                "invested": 0.0,
+                "risk_amount": risk_amount,
+            }
+
+        # Quantity based on maximum acceptable risk
+        quantity_by_risk = int(
+            risk_amount / risk_per_share
+        )
+
+        # Quantity based on available capital
+        quantity_by_capital = int(
+            capital / entry
+        )
+
+        quantity = min(
+            quantity_by_risk,
+            quantity_by_capital,
+        )
+
+        invested = round(
+            quantity * entry,
+            2,
+        )
 
         return {
-            "capital": capital,
-            "risk_percent": risk_percent,
-            "risk_amount": round(risk_amount, 2),
-            "risk_per_share": round(risk_per_share, 2),
             "quantity": quantity,
             "invested": invested,
+            "risk_amount": risk_amount,
         }

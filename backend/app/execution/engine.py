@@ -1,4 +1,6 @@
-from app.portfolio.service import PortfolioService
+from datetime import datetime
+
+from app.execution.capital import CapitalManager
 from app.trades.lifecycle import TradeLifecycle
 from app.trades.service import TradeService
 
@@ -10,25 +12,20 @@ class ExecutionEngine:
 
         trades = TradeService.get_all()
 
-        portfolio = PortfolioService.summary()
-
-        available = portfolio.available
-
         for trade in trades:
 
             if trade["state"] != "ENTRY_READY":
                 continue
 
-            required = (
+            invested = (
                 trade["entry_price"]
                 * trade["quantity"]
             )
 
-            if required > available:
-
+            if not CapitalManager.has_capital(
+                invested,
+            ):
                 continue
-
-            available -= required
 
             if trade["signal"] == "BUY":
 
@@ -38,7 +35,14 @@ class ExecutionEngine:
                     timeframe=trade["timeframe"],
                     values={
                         "state": "BUY_ACTIVE",
+                        "opened_at": datetime.now().isoformat(),
                     },
+                )
+
+                print(
+                    f"BUY EXECUTED "
+                    f"{trade['symbol']} "
+                    f"{trade['timeframe']}"
                 )
 
             elif trade["signal"] == "SELL":
@@ -49,5 +53,12 @@ class ExecutionEngine:
                     timeframe=trade["timeframe"],
                     values={
                         "state": "SELL_ACTIVE",
+                        "opened_at": datetime.now().isoformat(),
                     },
+                )
+
+                print(
+                    f"SELL EXECUTED "
+                    f"{trade['symbol']} "
+                    f"{trade['timeframe']}"
                 )

@@ -8,7 +8,7 @@ from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logger import logger
 from app.db.session import SessionLocal
-from app.execution.manager import ExecutionManager
+from app.execution.instance import execution_manager
 from app.history.rebuilder import HistoryRebuilder
 from app.instruments.cache import InstrumentCache
 from app.live.instance import live_manager
@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
     HistoryRebuilder.rebuild()
 
     # Start execution worker
-    ExecutionManager.start()
+    execution_manager.start()
 
     # Start live websocket
     live_manager.start()
@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # Stop execution worker
-    ExecutionManager.stop()
+    execution_manager.stop()
 
     # Stop live websocket
     live_manager.stop()
