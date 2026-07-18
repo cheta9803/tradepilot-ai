@@ -14,9 +14,7 @@ class ExecutionService:
 
         for trade in trades:
 
-            live = LiveCache.get(
-                trade["token"]
-            )
+            live = LiveCache.get(trade["token"])
 
             if live is None:
                 continue
@@ -37,10 +35,44 @@ class ExecutionService:
                 "SELL_ACTIVE",
             ):
 
+                cls._update_live_pnl(
+                    trade,
+                    ltp,
+                )
+
                 cls._process_exit(
                     trade,
                     ltp,
                 )
+
+    @classmethod
+    def _update_live_pnl(
+        cls,
+        trade: dict,
+        ltp: float,
+    ) -> None:
+
+        if trade["signal"] == "BUY":
+
+            pnl = (
+                ltp - trade["entry_price"]
+            ) * trade["quantity"]
+
+        else:
+
+            pnl = (
+                trade["entry_price"] - ltp
+            ) * trade["quantity"]
+
+        TradeLifecycle.update(
+            exchange=trade["exchange"],
+            token=trade["token"],
+            timeframe=trade["timeframe"],
+            values={
+                "current_price": round(ltp, 2),
+                "pnl": round(pnl, 2),
+            },
+        )
 
     @classmethod
     def _process_entry(
@@ -53,16 +85,10 @@ class ExecutionService:
 
         activate = False
 
-        if (
-            signal == "BUY"
-            and ltp >= trade["entry_price"]
-        ):
+        if signal == "BUY" and ltp >= trade["entry_price"]:
             activate = True
 
-        elif (
-            signal == "SELL"
-            and ltp <= trade["entry_price"]
-        ):
+        elif signal == "SELL" and ltp <= trade["entry_price"]:
             activate = True
 
         if not activate:
@@ -94,6 +120,9 @@ class ExecutionService:
         trade: dict,
         ltp: float,
     ) -> None:
+
+        if trade["closed_at"] is not None:
+            return
 
         signal = trade["signal"]
 
@@ -136,6 +165,7 @@ class ExecutionService:
                 "exit_price": ltp,
                 "reason": exit_reason,
                 "pnl": round(pnl, 2),
+                "current_price": round(ltp, 2),
             },
         )
 

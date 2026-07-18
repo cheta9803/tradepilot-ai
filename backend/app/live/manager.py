@@ -112,6 +112,7 @@ class LiveManager:
         message,
     ):
 
+        print("Tick received:", message)
         token = str(
             message.get("token")
         )

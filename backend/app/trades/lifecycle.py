@@ -76,16 +76,6 @@ class TradeLifecycle:
         ):
             trade["opened_at"] = now
 
-        if (
-            current_state in (
-                "TARGET_HIT",
-                "STOPLOSS_HIT",
-            )
-            and trade["closed_at"] is None
-        ):
-            trade["closed_at"] = now
-            trade["state"] = "EXIT"
-
         trade["updated_at"] = now
 
         redis_client.set(
