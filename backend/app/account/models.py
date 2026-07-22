@@ -2,19 +2,17 @@ from dataclasses import dataclass
 
 
 @dataclass(slots=True)
-class Portfolio:
+class Account:
 
     capital: float
 
-    invested: float
+    balance: float
 
-    available: float
+    equity: float
 
-    exposure: float
+    used_margin: float
 
-    open_positions: int
-
-    closed_positions: int
+    available_margin: float
 
     realized_pnl: float
 

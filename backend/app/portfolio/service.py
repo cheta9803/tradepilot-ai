@@ -11,6 +11,8 @@ class PortfolioService:
         trades = TradeService.get_all()
 
         invested = 0.0
+        exposure = 0.0
+
         open_positions = 0
         closed_positions = 0
 
@@ -27,10 +29,13 @@ class PortfolioService:
                 "SELL_ACTIVE",
             ):
 
-                invested += (
+                value = (
                     trade["entry_price"]
                     * trade["quantity"]
                 )
+
+                invested += value
+                exposure += value
 
                 open_positions += 1
 
@@ -62,6 +67,7 @@ class PortfolioService:
             capital=settings.default_capital,
             invested=round(invested, 2),
             available=round(available, 2),
+            exposure=round(exposure, 2),
             open_positions=open_positions,
             closed_positions=closed_positions,
             realized_pnl=round(realized_pnl, 2),

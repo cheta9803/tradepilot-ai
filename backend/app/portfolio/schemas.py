@@ -1,8 +1,7 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
 
 
-@dataclass(slots=True)
-class Portfolio:
+class PortfolioResponse(BaseModel):
 
     capital: float
 
