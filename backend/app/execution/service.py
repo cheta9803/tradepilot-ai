@@ -49,6 +49,15 @@ class ExecutionService:
                     ltp=ltp,
                 )
 
+                trade = TradeLifecycle.get(
+                    exchange=trade["exchange"],
+                    token=trade["token"],
+                    timeframe=trade["timeframe"],
+                )
+
+                if trade is None:
+                    continue
+
                 cls._process_exit(
                     trade,
                     ltp,
@@ -116,8 +125,7 @@ class ExecutionService:
                     if signal == "BUY"
                     else "SELL_ACTIVE"
                 ),
-                "opened_at": datetime.now().isoformat(),
-            },
+            }
         )
 
         print(
@@ -173,7 +181,6 @@ class ExecutionService:
             timeframe=trade["timeframe"],
             values={
                 "state": "EXIT",
-                "closed_at": datetime.now().isoformat(),
                 "exit_price": ltp,
                 "reason": exit_reason,
                 "pnl": round(pnl, 2),

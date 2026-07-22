@@ -71,6 +71,16 @@ class Settings(BaseSettings):
 
     cooldown_minutes: int = 30
 
+    # -------------------------
+    # Break-even Stop
+    # -------------------------
+
+    breakeven_enabled: bool = True
+
+    breakeven_atr_multiplier: float = 1.0
+
+    min_stop_move: float = 0.05
+
     # -------------------------------------------------
 
     model_config = SettingsConfigDict(

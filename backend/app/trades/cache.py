@@ -1,8 +1,11 @@
 import json
+from dataclasses import asdict
 from datetime import datetime
 
 from app.db.redis import redis_client
 from app.trades.models import Trade
+
+from typing import Any
 
 
 class TradeCache:
@@ -31,40 +34,17 @@ class TradeCache:
         trade: Trade,
     ) -> None:
 
+        data = asdict(trade)
+
+        data["updated_at"] = datetime.now().isoformat()
+
         redis_client.set(
             cls._key(
                 trade.exchange,
                 trade.token,
                 trade.timeframe,
             ),
-            json.dumps(
-                {
-                    "exchange": trade.exchange,
-                    "token": trade.token,
-                    "symbol": trade.symbol,
-                    "timeframe": trade.timeframe,
-                    "state": trade.state,
-                    "signal": trade.signal,
-                    "entry_price": trade.entry_price,
-                    "stop_loss": trade.stop_loss,
-                    "target": trade.target,
-                    "quantity": trade.quantity,
-                    "opened_at": (
-                        trade.opened_at.isoformat()
-                        if trade.opened_at
-                        else None
-                    ),
-                    "closed_at": (
-                        trade.closed_at.isoformat()
-                        if trade.closed_at
-                        else None
-                    ),
-                    "exit_price": trade.exit_price,
-                    "pnl": trade.pnl,
-                    "reason": trade.reason,
-                    "updated_at": datetime.now().isoformat(),
-                }
-            ),
+            json.dumps(data),
         )
 
     @classmethod
@@ -88,6 +68,32 @@ class TradeCache:
             return None
 
         return cls.deserialize(value)
+
+    @classmethod
+    def get_all(cls) -> list[dict[str, Any]]:
+        """
+        Return all cached trades.
+        """
+
+        pattern = f"{cls.PREFIX}:*"
+
+        keys = redis_client.keys(pattern)
+
+        if not keys:
+            return []
+
+        trades: list[dict[str, Any]] = []
+
+        for key in keys:
+
+            value = redis_client.get(key)
+
+            if value is None:
+                continue
+
+            trades.append(cls.deserialize(value))
+
+        return trades
 
     @classmethod
     def delete(

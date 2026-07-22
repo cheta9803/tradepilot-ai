@@ -39,3 +39,15 @@ class Trade:
     reason: str | None = None
 
     updated_at: str = datetime.now().isoformat()
+
+    # -------------------------
+    # Risk State
+    # -------------------------
+
+    highest_price: float = 0.0
+
+    lowest_price: float = 0.0
+
+    trail_started: bool = False
+
+    breakeven_done: bool = False

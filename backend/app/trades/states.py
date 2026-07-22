@@ -1,0 +1,6 @@
+class TradeStates:
+    WAIT = "WAIT"
+    ENTRY_READY = "ENTRY_READY"
+    BUY_ACTIVE = "BUY_ACTIVE"
+    SELL_ACTIVE = "SELL_ACTIVE"
+    EXIT = "EXIT"

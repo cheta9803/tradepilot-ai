@@ -51,6 +51,15 @@ class TradeLifecycle:
                         "stop_loss": stop_loss,
                         "target": target,
                         "quantity": quantity,
+
+                        # -------------------------
+                        # Reset Risk State
+                        # -------------------------
+                        "highest_price": entry,
+                        "lowest_price": entry,
+                        "trail_started": False,
+                        "breakeven_done": False,
+
                         "updated_at": datetime.now().isoformat(),
                     }
                 )
@@ -77,6 +86,14 @@ class TradeLifecycle:
             stop_loss=stop_loss,
             target=target,
             quantity=quantity,
+
+            # -------------------------
+            # Risk State
+            # -------------------------
+            highest_price=entry,
+            lowest_price=entry,
+            trail_started=False,
+            breakeven_done=False,
         )
 
         TradeCache.save(trade=trade)
@@ -118,7 +135,10 @@ class TradeLifecycle:
         ):
             trade["opened_at"] = now
 
-        if current_state == "EXIT" and trade["closed_at"] is None:
+        if (
+            current_state == "EXIT"
+            and trade["closed_at"] is None
+        ):
             trade["closed_at"] = now
 
         trade["updated_at"] = now
@@ -130,4 +150,19 @@ class TradeLifecycle:
                 timeframe,
             ),
             json.dumps(trade),
+        )
+
+    @classmethod
+    def get(
+        cls,
+        *,
+        exchange: str,
+        token: str,
+        timeframe: str,
+    ) -> dict | None:
+
+        return TradeCache.get(
+            exchange=exchange,
+            token=token,
+            timeframe=timeframe,
         )
