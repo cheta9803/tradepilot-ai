@@ -1,12 +1,9 @@
-from datetime import datetime
-
+from app.execution.eod import EndOfDayService
+from app.execution.order_service import ExecutionOrderService
 from app.live.redis_cache import LiveCache
+from app.risk.engine import RiskEngine
 from app.trades.lifecycle import TradeLifecycle
 from app.trades.service import TradeService
-
-from app.execution.eod import EndOfDayService
-
-from app.risk.engine import RiskEngine
 
 
 class ExecutionService:
@@ -65,7 +62,7 @@ class ExecutionService:
 
         # Run once after processing all trades
         EndOfDayService.square_off()
-        
+
     @classmethod
     def _update_live_pnl(
         cls,
@@ -115,6 +112,13 @@ class ExecutionService:
         if not activate:
             return
 
+        # Place paper/live broker order
+        if not ExecutionOrderService.execute_entry(
+            trade
+        ):
+            return
+
+        # Activate trade only after successful order placement
         TradeLifecycle.update(
             exchange=trade["exchange"],
             token=trade["token"],
@@ -125,7 +129,7 @@ class ExecutionService:
                     if signal == "BUY"
                     else "SELL_ACTIVE"
                 ),
-            }
+            },
         )
 
         print(

@@ -33,12 +33,21 @@ class Trade:
 
     pnl: float = 0.0
 
-    # NEW
     current_price: float = 0.0
 
     reason: str | None = None
 
     updated_at: str = datetime.now().isoformat()
+
+    # -------------------------
+    # Broker Order
+    # -------------------------
+
+    order_id: str | None = None
+
+    order_status: str | None = None
+
+    broker: str | None = None
 
     # -------------------------
     # Risk State
