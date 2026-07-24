@@ -1,4 +1,5 @@
 from app.candles.service import CandleService
+from app.core.logger import logger
 from app.instruments.cache import InstrumentCache
 from app.live.client import LiveClient
 from app.live.parser import LiveParser
@@ -20,9 +21,11 @@ class LiveManager:
         self.subscribed_tokens: set[str] = set()
 
     def start(self):
+        logger.info("Starting Live WebSocket...")
         self.client.connect()
 
     def stop(self):
+        logger.info("Stopping Live WebSocket...")
         self.client.close()
 
     def subscribe(
@@ -32,7 +35,7 @@ class LiveManager:
     ):
 
         if token in self.subscribed_tokens:
-            print(f"{token} already subscribed.")
+            logger.debug("%s already subscribed.", token)
             return
 
         exchange_type = (
@@ -40,9 +43,11 @@ class LiveManager:
             else 3
         )
 
-        print(
-            f"Subscribing: exchange={exchange}, "
-            f"exchangeType={exchange_type}, token={token}"
+        logger.info(
+            "Subscribing: exchange=%s exchangeType=%s token=%s",
+            exchange,
+            exchange_type,
+            token,
         )
 
         self.client.client.subscribe(
@@ -58,7 +63,7 @@ class LiveManager:
 
         self.subscribed_tokens.add(token)
 
-        print("Subscribe request sent.")
+        logger.info("Subscription request sent for %s.", token)
 
     def unsubscribe(
         self,
@@ -67,7 +72,7 @@ class LiveManager:
     ):
 
         if token not in self.subscribed_tokens:
-            print(f"{token} is not subscribed.")
+            logger.debug("%s is not subscribed.", token)
             return
 
         exchange_type = (
@@ -75,9 +80,11 @@ class LiveManager:
             else 3
         )
 
-        print(
-            f"Unsubscribing: exchange={exchange}, "
-            f"exchangeType={exchange_type}, token={token}"
+        logger.info(
+            "Unsubscribing: exchange=%s exchangeType=%s token=%s",
+            exchange,
+            exchange_type,
+            token,
         )
 
         self.client.client.unsubscribe(
@@ -93,22 +100,29 @@ class LiveManager:
 
         self.subscribed_tokens.remove(token)
 
-        print("Unsubscribe request sent.")
+        logger.info("Unsubscribe request sent for %s.", token)
 
     def on_open(self, ws):
-        print("Live WebSocket Connected")
+        logger.info("Live WebSocket Connected")
 
         self.client.mark_connected()
 
         WatchlistStartup.subscribe_all()
 
     def on_close(self, ws):
-        print("Live WebSocket Closed")
+        logger.warning("Live WebSocket Closed")
 
         self.client.mark_disconnected()
 
-    def on_error(self, ws, error):
-        print(error)
+    def on_error(
+        self,
+        ws,
+        error,
+    ):
+        logger.exception(
+            "Live WebSocket Error: %s",
+            error,
+        )
 
     def on_data(
         self,
@@ -116,43 +130,56 @@ class LiveManager:
         message,
     ):
 
-        print("Tick received:", message)
-        token = str(
-            message.get("token")
-        )
+        try:
 
-        instrument = InstrumentCache.get_by_token(
-            token
-        )
+            logger.debug("Tick received: %s", message)
 
-        if instrument is None:
-            return
+            token = str(
+                message.get("token")
+            )
 
-        data = LiveParser.parse(
-            message=message,
-            instrument=instrument,
-        )
+            instrument = InstrumentCache.get_by_token(
+                token
+            )
 
-        LiveCache.save(
-            token,
-            data,
-        )
+            if instrument is None:
+                logger.warning(
+                    "Unknown instrument token received: %s",
+                    token,
+                )
+                return
 
-        CandleService.process_tick(
-            exchange=instrument.exchange,
-            symbol=instrument.symbol,
-            token=instrument.token,
-            price=data["ltp"],
-            volume=data["volume"],
-            timestamp=data["timestamp"],
-        )
+            data = LiveParser.parse(
+                message=message,
+                instrument=instrument,
+            )
 
-        for timeframe in (
-            "1m",
-            "5m",
-        ):
-            TradeMonitor.update(
+            LiveCache.save(
+                token,
+                data,
+            )
+
+            CandleService.process_tick(
                 exchange=instrument.exchange,
+                symbol=instrument.symbol,
                 token=instrument.token,
-                timeframe=timeframe,
+                price=data["ltp"],
+                volume=data["volume"],
+                timestamp=data["timestamp"],
+            )
+
+            for timeframe in (
+                "1m",
+                "5m",
+            ):
+                TradeMonitor.update(
+                    exchange=instrument.exchange,
+                    token=instrument.token,
+                    timeframe=timeframe,
+                )
+
+        except Exception:
+
+            logger.exception(
+                "Unhandled exception while processing live tick."
             )
