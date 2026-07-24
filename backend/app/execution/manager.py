@@ -1,6 +1,7 @@
 import threading
 import time
 
+from app.core.logger import logger
 from app.execution.service import ExecutionService
 from app.orders.sync import OrderSyncService
 
@@ -10,9 +11,8 @@ class ExecutionManager:
     ORDER_SYNC_INTERVAL = 5  # seconds
 
     def __init__(self):
-
         self.running = False
-        self.thread = None
+        self.thread: threading.Thread | None = None
         self.sync_counter = 0
 
     def start(self):
@@ -25,15 +25,22 @@ class ExecutionManager:
         self.thread = threading.Thread(
             target=self.run,
             daemon=True,
+            name="ExecutionManager",
         )
 
         self.thread.start()
 
-        print("Execution Manager Started")
+        logger.info("Execution Manager Started")
 
     def stop(self):
 
         self.running = False
+
+        if self.thread is not None:
+            self.thread.join(timeout=5)
+            self.thread = None
+
+        logger.info("Execution Manager Stopped")
 
     def run(self):
 
@@ -56,10 +63,7 @@ class ExecutionManager:
 
                     self.sync_counter = 0
 
-            except Exception as e:
-
-                print(
-                    f"Execution Manager Error: {e}"
-                )
+            except Exception:
+                logger.exception("Execution Manager Error")
 
             time.sleep(1)
