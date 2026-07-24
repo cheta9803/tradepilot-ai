@@ -12,28 +12,58 @@ from app.orders.enums import (
 @dataclass(slots=True)
 class Order:
 
+    # -------------------------------------------------
+    # Broker Identity
+    # -------------------------------------------------
+
     order_id: str | None
 
-    symbol: str
+    exchange_order_id: str | None = None
 
-    exchange: str
+    # -------------------------------------------------
+    # Instrument
+    # -------------------------------------------------
 
-    token: str
+    symbol: str = ""
 
-    transaction_type: TransactionType
+    exchange: str = ""
 
-    order_type: OrderType
+    token: str = ""
 
-    product_type: ProductType
+    # -------------------------------------------------
+    # Order Details
+    # -------------------------------------------------
 
-    quantity: int
+    transaction_type: TransactionType | None = None
 
-    price: float
+    order_type: OrderType | None = None
 
-    trigger_price: float | None
+    product_type: ProductType | None = None
 
-    status: OrderStatus
+    quantity: int = 0
 
-    message: str | None
+    price: float = 0.0
 
-    created_at: datetime
+    trigger_price: float | None = None
+
+    # -------------------------------------------------
+    # Execution
+    # -------------------------------------------------
+
+    average_price: float | None = None
+
+    filled_quantity: int = 0
+
+    pending_quantity: int = 0
+
+    status: OrderStatus = OrderStatus.PENDING
+
+    message: str | None = None
+
+    # -------------------------------------------------
+    # Audit
+    # -------------------------------------------------
+
+    created_at: datetime = datetime.now()
+
+    updated_at: datetime | None = None
