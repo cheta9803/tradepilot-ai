@@ -14,6 +14,8 @@ from app.history.rebuilder import HistoryRebuilder
 from app.instruments.cache import InstrumentCache
 from app.live.instance import live_manager
 
+from app.startup.recovery import StartupRecovery
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -30,6 +32,8 @@ async def lifespan(app: FastAPI):
     HistoryRebuilder.rebuild()
 
     AngelClient.login()
+
+    StartupRecovery.recover()
 
     execution_manager.start()
 
