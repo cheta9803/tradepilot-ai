@@ -1,29 +1,36 @@
-from loguru import logger
+import logging
 import sys
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-# Create logs directory
+from app.core.config import settings
+
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
 
-# Remove default logger
-logger.remove()
-
-# Console logging
-logger.add(
-    sys.stdout,
-    level="INFO",
-    colorize=True,
-    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
-           "<level>{level}</level> | "
-           "{name}:{function}:{line} - {message}"
+FORMAT = (
+    "%(asctime)s | "
+    "%(levelname)s | "
+    "%(name)s:%(funcName)s:%(lineno)d | "
+    "%(message)s"
 )
 
-# File logging
-logger.add(
-    LOG_DIR / "tradepilot.log",
-    rotation="10 MB",
-    retention="30 days",
-    level="INFO",
-    enqueue=True
+logging.basicConfig(
+    level=getattr(logging, settings.log_level.upper()),
+    format=FORMAT,
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        RotatingFileHandler(
+            LOG_DIR / "tradepilot.log",
+            maxBytes=10 * 1024 * 1024,
+            backupCount=5,
+            encoding="utf-8",
+        ),
+    ],
 )
+
+logging.getLogger("uvicorn").setLevel(logging.INFO)
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+logger = logging.getLogger("tradepilot")
