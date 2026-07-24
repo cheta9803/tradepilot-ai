@@ -3,8 +3,8 @@ from datetime import datetime
 from app.angel.client import AngelClient
 from app.core.config import settings
 from app.core.logger import logger
-from app.trades.cache import TradeCache
 from app.trades.lifecycle import TradeLifecycle
+from app.trades.service import TradeService
 
 
 class OrderSyncService:
@@ -13,14 +13,20 @@ class OrderSyncService:
     def sync_all(cls) -> None:
 
         if settings.paper_trading:
-
             logger.debug(
                 "Order Sync skipped (paper trading enabled)"
             )
-
             return
 
-        trades = TradeCache.get_all()
+        trades = TradeService.get_open()
+
+        if not trades:
+            return
+
+        orders = cls.fetch_orders()
+
+        if not orders:
+            return
 
         for trade in trades:
 
@@ -29,36 +35,64 @@ class OrderSyncService:
             if not order_id:
                 continue
 
-            cls.sync_trade(trade)
+            order = orders.get(order_id)
+
+            if order is None:
+                continue
+
+            cls.sync_trade(
+                trade=trade,
+                order=order,
+            )
 
     @classmethod
     def sync_trade(
         cls,
         trade: dict,
+        order: dict,
     ) -> None:
 
-        order = cls.fetch_order(
-            trade["order_id"],
-        )
+        values = {
+            "order_status": order["status"],
+            "updated_at": datetime.now().isoformat(),
+        }
 
-        if order is None:
-            return
+        if order.get("average_price") is not None:
+            values["entry_price"] = order[
+                "average_price"
+            ]
+
+        status = order["status"].upper()
+
+        if status == "REJECTED":
+
+            values.update(
+                {
+                    "state": "REJECTED",
+                    "reason": "Broker Rejected",
+                    "closed_at": datetime.now().isoformat(),
+                }
+            )
+
+        elif status == "CANCELLED":
+
+            values.update(
+                {
+                    "state": "CANCELLED",
+                    "reason": "Broker Cancelled",
+                    "closed_at": datetime.now().isoformat(),
+                }
+            )
 
         TradeLifecycle.update(
             exchange=trade["exchange"],
             token=trade["token"],
             timeframe=trade["timeframe"],
-            values={
-                "order_status": order["status"],
-                "updated_at": datetime.now().isoformat(),
-            },
+            values=values,
         )
 
     @classmethod
-    def fetch_order(
-        cls,
-        order_id: str,
-    ) -> dict | None:
+    def fetch_orders(cls) -> dict[str, dict]:
 
         try:
 
@@ -67,22 +101,56 @@ class OrderSyncService:
             response = smart_api.orderBook()
 
             if response is None:
-                return None
+                return {}
 
             if not response.get("status"):
-                return None
+                return {}
 
-            orders = response.get("data", [])
+            orders = {}
 
-            for order in orders:
+            for order in response.get("data", []):
 
-                if order.get("orderid") == order_id:
+                order_id = order.get("orderid")
 
-                    return {
-                        "status": order.get(
-                            "orderstatus",
-                        ),
-                    }
+                if not order_id:
+                    continue
+
+                average_price = order.get(
+                    "averageprice"
+                )
+
+                try:
+                    average_price = (
+                        float(average_price)
+                        if average_price
+                        else None
+                    )
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+                    average_price = None
+
+                orders[order_id] = {
+                    "status": order.get(
+                        "orderstatus",
+                        "",
+                    ),
+                    "average_price": average_price,
+                    "filled_quantity": order.get(
+                        "filledshares"
+                    ),
+                    "pending_quantity": order.get(
+                        "unfilledshares"
+                    ),
+                }
+
+            logger.info(
+                "Fetched %d broker orders from broker.",
+                len(orders),
+            )
+
+            return orders
 
         except Exception:
 
@@ -90,4 +158,4 @@ class OrderSyncService:
                 "Order synchronization failed."
             )
 
-        return None
+            return {}
