@@ -1,3 +1,4 @@
+from app.core.market_session import MarketSession
 from app.execution.eod import EndOfDayService
 from app.execution.order_service import ExecutionOrderService
 from app.live.redis_cache import LiveCache
@@ -13,9 +14,13 @@ class ExecutionService:
 
         trades = TradeService.get_open()
 
+        market_open = MarketSession.can_enter_trade()
+
         for trade in trades:
 
-            live = LiveCache.get(trade["token"])
+            live = LiveCache.get(
+                trade["token"]
+            )
 
             if live is None:
                 continue
@@ -24,7 +29,14 @@ class ExecutionService:
 
             state = trade["state"]
 
-            if state == "ENTRY_READY":
+            #
+            # Do not activate new trades
+            # after market hours.
+            #
+            if (
+                state == "ENTRY_READY"
+                and market_open
+            ):
 
                 cls._process_entry(
                     trade,
@@ -60,8 +72,8 @@ class ExecutionService:
                     ltp,
                 )
 
-        # Run once after processing all trades
-        EndOfDayService.square_off()
+        if MarketSession.should_square_off():
+            EndOfDayService.square_off()
 
     @classmethod
     def _update_live_pnl(
@@ -87,8 +99,14 @@ class ExecutionService:
             token=trade["token"],
             timeframe=trade["timeframe"],
             values={
-                "current_price": round(ltp, 2),
-                "pnl": round(pnl, 2),
+                "current_price": round(
+                    ltp,
+                    2,
+                ),
+                "pnl": round(
+                    pnl,
+                    2,
+                ),
             },
         )
 
@@ -103,22 +121,26 @@ class ExecutionService:
 
         activate = False
 
-        if signal == "BUY" and ltp >= trade["entry_price"]:
+        if (
+            signal == "BUY"
+            and ltp >= trade["entry_price"]
+        ):
             activate = True
 
-        elif signal == "SELL" and ltp <= trade["entry_price"]:
+        elif (
+            signal == "SELL"
+            and ltp <= trade["entry_price"]
+        ):
             activate = True
 
         if not activate:
             return
 
-        # Place paper/live broker order
         if not ExecutionOrderService.execute_entry(
             trade
         ):
             return
 
-        # Activate trade only after successful order placement
         TradeLifecycle.update(
             exchange=trade["exchange"],
             token=trade["token"],
@@ -187,8 +209,14 @@ class ExecutionService:
                 "state": "EXIT",
                 "exit_price": ltp,
                 "reason": exit_reason,
-                "pnl": round(pnl, 2),
-                "current_price": round(ltp, 2),
+                "pnl": round(
+                    pnl,
+                    2,
+                ),
+                "current_price": round(
+                    ltp,
+                    2,
+                ),
             },
         )
 

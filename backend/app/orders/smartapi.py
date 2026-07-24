@@ -1,16 +1,20 @@
 from datetime import datetime
 from uuid import uuid4
 
+from app.angel.client import AngelClient
 from app.core.config import settings
+from app.core.retry import Retry
 from app.orders.enums import OrderStatus
 from app.orders.models import Order
-from app.smartapi.client import smart_api
 
 
 class SmartAPIOrderService:
 
     @classmethod
-    def place_order(cls, order: Order) -> Order:
+    def place_order(
+        cls,
+        order: Order,
+    ) -> Order:
 
         if settings.paper_trading:
 
@@ -20,6 +24,43 @@ class SmartAPIOrderService:
             order.created_at = datetime.now()
 
             return order
+
+        response = Retry.execute(
+            cls._place_order,
+            order,
+        )
+
+        if response is None:
+
+            order.status = OrderStatus.FAILED
+            order.message = "Broker did not return a response."
+
+        elif response.get("status", False):
+
+            order.order_id = response["data"]["orderid"]
+            order.status = OrderStatus.PENDING
+            order.message = response.get(
+                "message",
+                "Order submitted",
+            )
+
+        else:
+
+            order.status = OrderStatus.FAILED
+            order.message = response.get(
+                "message",
+                "Order placement failed",
+            )
+
+        order.created_at = datetime.now()
+
+        return order
+
+    @classmethod
+    def _place_order(
+        cls,
+        order: Order,
+    ) -> dict | None:
 
         payload = {
             "variety": "NORMAL",
@@ -37,24 +78,12 @@ class SmartAPIOrderService:
         }
 
         if order.trigger_price is not None:
-            payload["triggerprice"] = str(order.trigger_price)
-
-        response = smart_api.placeOrder(payload)
-
-        if response.get("status"):
-
-            order.order_id = response["data"]["orderid"]
-            order.status = OrderStatus.PENDING
-            order.message = "Order submitted"
-
-        else:
-
-            order.status = OrderStatus.FAILED
-            order.message = response.get(
-                "message",
-                "Order placement failed",
+            payload["triggerprice"] = str(
+                order.trigger_price
             )
 
-        order.created_at = datetime.now()
+        smart_api = AngelClient.get_client()
 
-        return order
+        return smart_api.placeOrderFullResponse(
+            payload
+        )

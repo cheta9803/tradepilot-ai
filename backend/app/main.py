@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.angel.client import AngelClient
 from app.api.router import api_router
 from app.candles.history_loader import CandleHistoryLoader
 from app.core.config import settings
@@ -26,23 +27,20 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
-    # Build all higher timeframes from existing history
     HistoryRebuilder.rebuild()
 
-    # Start execution worker
+    AngelClient.login()
+
     execution_manager.start()
 
-    # Start live websocket
     live_manager.start()
 
     logger.info("TradePilot AI started")
 
     yield
 
-    # Stop execution worker
     execution_manager.stop()
 
-    # Stop live websocket
     live_manager.stop()
 
     logger.info("TradePilot AI stopped")

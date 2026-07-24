@@ -1,52 +1,83 @@
-from SmartApi import SmartConnect
-import pyotp
+from threading import Lock
 
-from app.core.config import settings
+import pyotp
+from SmartApi import SmartConnect
+
 from app.angel.exceptions import AngelAPIException
+from app.core.config import settings
 
 
 class AngelClient:
 
     _client: SmartConnect | None = None
+    _lock = Lock()
 
     @classmethod
     def login(cls) -> SmartConnect:
-        """
-        Returns a shared authenticated SmartConnect
-        instance.
-        """
 
         if cls._client is not None:
             return cls._client
 
-        smart_api = SmartConnect(
-            api_key=settings.angel_api_key,
-        )
+        with cls._lock:
 
-        totp = pyotp.TOTP(
-            settings.angel_totp_secret,
-        ).now()
+            if cls._client is not None:
+                return cls._client
 
-        response = smart_api.generateSession(
-            settings.angel_client_id,
-            settings.angel_pin,
-            totp,
-        )
-
-        if not response.get("status"):
-            raise AngelAPIException(
-                response.get(
-                    "message",
-                    "Angel One login failed.",
-                )
+            smart_api = SmartConnect(
+                api_key=settings.angel_api_key,
             )
 
-        refresh_token = response["data"]["refreshToken"]
+            totp = pyotp.TOTP(
+                settings.angel_totp_secret,
+            ).now()
 
-        smart_api.generateToken(
-            refresh_token,
-        )
+            response = smart_api.generateSession(
+                settings.angel_client_id,
+                settings.angel_pin,
+                totp,
+            )
 
-        cls._client = smart_api
+            if (
+                response is None
+                or not response.get("status")
+            ):
+                raise AngelAPIException(
+                    response.get(
+                        "message",
+                        "Angel One login failed.",
+                    )
+                    if response
+                    else "Angel One login failed."
+                )
 
-        return cls._client
+            refresh_token = response["data"][
+                "refreshToken"
+            ]
+
+            token_response = smart_api.generateToken(
+                refresh_token,
+            )
+
+            if (
+                token_response is None
+                or not token_response.get("status")
+            ):
+                raise AngelAPIException(
+                    "Unable to generate broker access token."
+                )
+
+            cls._client = smart_api
+
+            return cls._client
+
+    @classmethod
+    def get_client(cls) -> SmartConnect:
+        return cls.login()
+
+    @classmethod
+    def is_logged_in(cls) -> bool:
+        return cls._client is not None
+
+    @classmethod
+    def reset(cls) -> None:
+        cls._client = None

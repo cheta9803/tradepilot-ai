@@ -1,8 +1,8 @@
 from datetime import datetime
 
+from app.angel.client import AngelClient
 from app.core.config import settings
-from app.orders.enums import OrderStatus
-from app.smartapi.client import smart_api
+from app.core.logger import logger
 from app.trades.cache import TradeCache
 from app.trades.lifecycle import TradeLifecycle
 
@@ -14,10 +14,8 @@ class OrderSyncService:
 
         if settings.paper_trading:
 
-            from datetime import datetime
-
-            print(
-                f"[{datetime.now().strftime('%H:%M:%S')}] Order Sync skipped (paper trading enabled)"
+            logger.debug(
+                "Order Sync skipped (paper trading enabled)"
             )
 
             return
@@ -34,7 +32,10 @@ class OrderSyncService:
             cls.sync_trade(trade)
 
     @classmethod
-    def sync_trade(cls, trade: dict) -> None:
+    def sync_trade(
+        cls,
+        trade: dict,
+    ) -> None:
 
         order = cls.fetch_order(
             trade["order_id"],
@@ -61,25 +62,32 @@ class OrderSyncService:
 
         try:
 
+            smart_api = AngelClient.get_client()
+
             response = smart_api.orderBook()
+
+            if response is None:
+                return None
 
             if not response.get("status"):
                 return None
 
-            orders = response["data"]
+            orders = response.get("data", [])
 
             for order in orders:
 
-                if order["orderid"] == order_id:
+                if order.get("orderid") == order_id:
 
                     return {
-                        "status": order["orderstatus"],
+                        "status": order.get(
+                            "orderstatus",
+                        ),
                     }
 
-        except Exception as e:
+        except Exception:
 
-            print(
-                f"Order Sync Error: {e}"
+            logger.exception(
+                "Order synchronization failed."
             )
 
         return None

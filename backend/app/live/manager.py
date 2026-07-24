@@ -98,10 +98,14 @@ class LiveManager:
     def on_open(self, ws):
         print("Live WebSocket Connected")
 
+        self.client.mark_connected()
+
         WatchlistStartup.subscribe_all()
 
     def on_close(self, ws):
         print("Live WebSocket Closed")
+
+        self.client.mark_disconnected()
 
     def on_error(self, ws, error):
         print(error)

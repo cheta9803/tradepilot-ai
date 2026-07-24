@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from app.instruments.cache import InstrumentCache
 from app.orders.enums import OrderStatus
 from app.orders.models import Order
 from app.orders.schemas import PlaceOrderRequest
@@ -14,11 +15,21 @@ class OrderService:
         request: PlaceOrderRequest,
     ) -> Order:
 
+        instrument = InstrumentCache.get_by_token(
+            request.token,
+        )
+
+        if instrument is None:
+
+            raise ValueError(
+                f"Instrument not found for token: {request.token}"
+            )
+
         order = Order(
             order_id=None,
-            symbol=request.symbol,
-            exchange=request.exchange,
-            token=request.token,
+            symbol=instrument.trading_symbol,
+            exchange=instrument.exchange,
+            token=instrument.token,
             transaction_type=request.transaction_type,
             order_type=request.order_type,
             product_type=request.product_type,
