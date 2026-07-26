@@ -1,0 +1,9 @@
+export const environment = {
+  production: false,
+
+  apiUrl: 'http://127.0.0.1:8000/api/v1',
+
+  appName: 'TradePilot AI',
+
+  version: '1.0.0',
+};
