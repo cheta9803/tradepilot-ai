@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+
+mat-card {
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.value {
+  margin-top: 20px;
+  font-size: 32px;
+  font-weight: 600;
+}

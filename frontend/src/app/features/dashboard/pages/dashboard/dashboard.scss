@@ -1,0 +1,8 @@
+.stats {
+  margin-top: 32px;
+
+  display: grid;
+  gap: 24px;
+
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}

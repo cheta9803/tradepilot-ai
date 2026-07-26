@@ -1,1 +1,32 @@
-<p>dashboard works!</p>
+<app-page-header
+  [title]="'Dashboard'"
+  [subtitle]="'Welcome to TradePilot AI'">
+</app-page-header>
+
+<div class="stats">
+
+  <app-stat-card
+    title="Portfolio Value"
+    value="$0"
+    icon="account_balance_wallet">
+  </app-stat-card>
+
+  <app-stat-card
+    title="Today's P&L"
+    value="$0"
+    icon="trending_up">
+  </app-stat-card>
+
+  <app-stat-card
+    title="Available Margin"
+    value="$0"
+    icon="payments">
+  </app-stat-card>
+
+  <app-stat-card
+    title="Open Positions"
+    value="0"
+    icon="analytics">
+  </app-stat-card>
+
+</div>
