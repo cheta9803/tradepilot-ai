@@ -17,10 +17,15 @@ from app.strategy.api import router as strategy_router
 from app.trades.api import router as trades_router
 from app.watchlist.api import router as watchlist_router
 
+from app.dashboard.api import router as dashboard_router
+
 api_router = APIRouter(prefix="/api/v1")
 
 # Health
 api_router.include_router(health_router)
+
+# Dashboard
+api_router.include_router(dashboard_router)
 
 # Authentication
 api_router.include_router(auth_router)

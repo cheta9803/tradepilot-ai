@@ -1,85 +1,48 @@
-import { Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
+
+import { DashboardApi } from '../api/dashboard-api';
 import {
-    DashboardSummary,
-    MarketIndex,
-    Order,
-    Position,
+  DashboardSummary,
+  MarketIndex,
+  Order,
+  Position,
 } from '../models/dashboard.model';
 
 @Injectable({
-    providedIn: 'root',
+  providedIn: 'root',
 })
 export class DashboardService {
-    readonly summary = signal<DashboardSummary>({
-        portfolioValue: 152340,
-        todayPnL: 2450,
-        availableMargin: 82000,
-        openPositions: 3,
+
+  private readonly dashboardApi = inject(DashboardApi);
+
+  private readonly _summary = signal<DashboardSummary>({
+    portfolioValue: 0,
+    todayPnL: 0,
+    availableMargin: 0,
+    openPositions: 0,
+  });
+
+  private readonly _indices = signal<MarketIndex[]>([]);
+  private readonly _positions = signal<Position[]>([]);
+  private readonly _orders = signal<Order[]>([]);
+
+  readonly summary = computed(() => this._summary());
+  readonly indices = computed(() => this._indices());
+  readonly positions = computed(() => this._positions());
+  readonly orders = computed(() => this._orders());
+
+  load(): void {
+    this.dashboardApi.getDashboard().subscribe({
+      next: (response) => {
+        this._summary.set(response.summary);
+        this._indices.set(response.indices);
+        this._positions.set(response.positions);
+        this._orders.set(response.orders);
+      },
+      error: (error) => {
+        console.error(error);
+      },
     });
+  }
 
-    readonly indices = signal([
-        {
-            name: 'NIFTY 50',
-            value: 25186.40,
-            change: 118.35,
-            changePercent: 0.47,
-        },
-        {
-            name: 'BANK NIFTY',
-            value: 56632.15,
-            change: -62.40,
-            changePercent: -0.11,
-        },
-        {
-            name: 'FINNIFTY',
-            value: 27492.20,
-            change: 58.75,
-            changePercent: 0.21,
-        },
-    ]);
-
-    readonly positions = signal([
-        {
-            symbol: 'RELIANCE',
-            quantity: 20,
-            averagePrice: 2700,
-            ltp: 2725,
-            pnl: 500,
-        },
-        {
-            symbol: 'TCS',
-            quantity: 15,
-            averagePrice: 3650,
-            ltp: 3605,
-            pnl: -675,
-        },
-        {
-            symbol: 'INFY',
-            quantity: 30,
-            averagePrice: 1580,
-            ltp: 1608,
-            pnl: 840,
-        },
-    ]);
-
-    readonly orders = signal([
-        {
-            symbol: 'RELIANCE',
-            type: 'BUY',
-            quantity: 20,
-            status: 'Completed',
-        },
-        {
-            symbol: 'TCS',
-            type: 'SELL',
-            quantity: 10,
-            status: 'Pending',
-        },
-        {
-            symbol: 'INFY',
-            type: 'BUY',
-            quantity: 15,
-            status: 'Completed',
-        },
-    ]);
 }

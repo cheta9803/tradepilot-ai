@@ -16,6 +16,8 @@ from app.live.instance import live_manager
 
 from app.startup.recovery import StartupRecovery
 
+from fastapi.middleware.cors import CORSMiddleware
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -54,6 +56,16 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:4200",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 register_exception_handlers(app)

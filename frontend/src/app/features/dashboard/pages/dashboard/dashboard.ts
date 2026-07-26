@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  inject,
+} from '@angular/core';
+
+import { DashboardService } from '../../services/dashboard.service';
 
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { SummaryCards } from '../../components/summary-cards/summary-cards';
@@ -21,4 +28,12 @@ import { Watchlist } from '../../components/watchlist/watchlist';
   styleUrl: './dashboard.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Dashboard {}
+export class Dashboard implements OnInit {
+
+  private readonly dashboardService = inject(DashboardService);
+
+  ngOnInit(): void {
+    this.dashboardService.load();
+  }
+
+}
