@@ -1,0 +1,15 @@
+.shell-container {
+  height: 100vh;
+}
+
+mat-sidenav {
+  width: 260px;
+  border-right: 1px solid #e5e7eb;
+}
+
+.page-content {
+  height: calc(100vh - 64px);
+  overflow: auto;
+  padding: 24px;
+  background: #f8fafc;
+}
