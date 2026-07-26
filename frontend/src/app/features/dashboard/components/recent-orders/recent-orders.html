@@ -1,0 +1,55 @@
+<app-section-card title="Recent Orders">
+
+  <table
+    mat-table
+    [dataSource]="dataSource()"
+    class="w-100">
+
+    <ng-container matColumnDef="symbol">
+      <th mat-header-cell *matHeaderCellDef>Symbol</th>
+      <td mat-cell *matCellDef="let row">
+        {{ row.symbol }}
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="type">
+      <th mat-header-cell *matHeaderCellDef>Type</th>
+      <td mat-cell *matCellDef="let row">
+
+        <span
+          class="badge"
+          [class.text-bg-success]="row.type === 'BUY'"
+          [class.text-bg-danger]="row.type === 'SELL'">
+
+          {{ row.type }}
+
+        </span>
+
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="quantity">
+      <th mat-header-cell *matHeaderCellDef>Qty</th>
+      <td mat-cell *matCellDef="let row">
+        {{ row.quantity }}
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef>Status</th>
+      <td mat-cell *matCellDef="let row">
+
+        <mat-chip>
+          {{ row.status }}
+        </mat-chip>
+
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+
+  </table>
+
+</app-section-card>

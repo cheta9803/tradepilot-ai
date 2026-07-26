@@ -4,6 +4,8 @@ import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { SummaryCards } from '../../components/summary-cards/summary-cards';
 import { MarketIndices } from '../../components/market-indices/market-indices';
 import { OpenPositions } from '../../components/open-positions/open-positions';
+import { RecentOrders } from '../../components/recent-orders/recent-orders';
+import { Watchlist } from '../../components/watchlist/watchlist';
 
 @Component({
   selector: 'app-dashboard',
@@ -12,6 +14,8 @@ import { OpenPositions } from '../../components/open-positions/open-positions';
     SummaryCards,
     MarketIndices,
     OpenPositions,
+    RecentOrders,
+    Watchlist,
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',

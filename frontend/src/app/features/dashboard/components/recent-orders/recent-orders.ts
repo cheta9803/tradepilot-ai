@@ -1,33 +1,32 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
+import { MatChipsModule } from '@angular/material/chips';
 
 import { SectionCard } from '../../../../shared/ui/section-card/section-card';
 import { DashboardService } from '../../services/dashboard.service';
 
 @Component({
-  selector: 'app-open-positions',
+  selector: 'app-recent-orders',
   imports: [
     SectionCard,
     MatTableModule,
-    DecimalPipe,
+    MatChipsModule,
   ],
-  templateUrl: './open-positions.html',
-  styleUrl: './open-positions.scss',
+  templateUrl: './recent-orders.html',
+  styleUrl: './recent-orders.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class OpenPositions {
+export class RecentOrders {
 
   readonly dashboard = inject(DashboardService);
 
   readonly displayedColumns = [
     'symbol',
+    'type',
     'quantity',
-    'averagePrice',
-    'ltp',
-    'pnl',
+    'status',
   ];
 
-  readonly dataSource = computed(() => this.dashboard.positions());
+  readonly dataSource = computed(() => this.dashboard.orders());
 
 }

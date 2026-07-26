@@ -2,11 +2,34 @@
 
   @for (index of dashboard.indices(); track index.name) {
 
-    <div class="row">
+    <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
 
-      <span>{{ index.name }}</span>
+      <div class="d-flex flex-column">
 
-      <span>{{ index.value }}</span>
+        <div class="fw-semibold">
+          {{ index.name }}
+        </div>
+
+      </div>
+
+      <div class="text-end">
+
+        <div class="fw-bold fs-6">
+          {{ index.value | number:'1.2-2' }}
+        </div>
+
+        <div
+          class="small fw-medium"
+          [class.text-success]="index.change >= 0"
+          [class.text-danger]="index.change < 0">
+
+          {{ index.change > 0 ? '+' : '' }}{{ index.change | number:'1.2-2' }}
+
+          ({{ index.changePercent | number:'1.2-2' }}%)
+
+        </div>
+
+      </div>
 
     </div>
 
