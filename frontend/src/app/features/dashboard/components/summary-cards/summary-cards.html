@@ -1,27 +1,39 @@
-<div class="summary-grid">
+<div class="container-fluid px-0">
 
-  <app-stat-card
-    title="Portfolio Value"
-    [value]="dashboard.summary().portfolioValue"
-    icon="account_balance_wallet">
-  </app-stat-card>
+  <div class="row g-4">
 
-  <app-stat-card
-    title="Today's P&L"
-    [value]="dashboard.summary().todayPnL"
-    icon="trending_up">
-  </app-stat-card>
+    <div class="col-12 col-sm-6 col-xl-3">
+      <app-stat-card
+        title="Portfolio Value"
+        [value]="dashboard.summary().portfolioValue"
+        icon="account_balance_wallet">
+      </app-stat-card>
+    </div>
 
-  <app-stat-card
-    title="Available Margin"
-    [value]="dashboard.summary().availableMargin"
-    icon="payments">
-  </app-stat-card>
+    <div class="col-12 col-sm-6 col-xl-3">
+      <app-stat-card
+        title="Today's P&L"
+        [value]="dashboard.summary().todayPnL"
+        icon="trending_up">
+      </app-stat-card>
+    </div>
 
-  <app-stat-card
-    title="Open Positions"
-    [value]="dashboard.summary().openPositions"
-    icon="analytics">
-  </app-stat-card>
+    <div class="col-12 col-sm-6 col-xl-3">
+      <app-stat-card
+        title="Available Margin"
+        [value]="dashboard.summary().availableMargin"
+        icon="payments">
+      </app-stat-card>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+      <app-stat-card
+        title="Open Positions"
+        [value]="dashboard.summary().openPositions"
+        icon="analytics">
+      </app-stat-card>
+    </div>
+
+  </div>
 
 </div>
