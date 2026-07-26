@@ -1,0 +1,15 @@
+<app-section-card title="Market Indices">
+
+  @for (index of dashboard.indices(); track index.name) {
+
+    <div class="row">
+
+      <span>{{ index.name }}</span>
+
+      <span>{{ index.value }}</span>
+
+    </div>
+
+  }
+
+</app-section-card>

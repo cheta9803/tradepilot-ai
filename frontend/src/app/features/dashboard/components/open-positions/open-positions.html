@@ -1,0 +1,15 @@
+<app-section-card title="Open Positions">
+
+  @for (position of dashboard.positions(); track position.symbol) {
+
+    <div class="row">
+
+      <span>{{ position.symbol }}</span>
+
+      <span>{{ position.pnl }}</span>
+
+    </div>
+
+  }
+
+</app-section-card>

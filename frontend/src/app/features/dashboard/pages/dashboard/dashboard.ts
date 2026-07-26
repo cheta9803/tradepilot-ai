@@ -1,21 +1,20 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
-import { SectionCard } from '../../../../shared/ui/section-card/section-card';
 import { SummaryCards } from '../../components/summary-cards/summary-cards';
-import { DashboardService } from '../../services/dashboard.service';
+import { MarketIndices } from '../../components/market-indices/market-indices';
+import { OpenPositions } from '../../components/open-positions/open-positions';
 
 @Component({
   selector: 'app-dashboard',
   imports: [
     PageHeader,
     SummaryCards,
-    SectionCard,
+    MarketIndices,
+    OpenPositions,
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Dashboard {
-  readonly dashboard = inject(DashboardService);
-}
+export class Dashboard {}

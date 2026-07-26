@@ -7,20 +7,8 @@
 
 <div class="widgets">
 
-  <app-section-card title="Market Indices">
+  <app-market-indices></app-market-indices>
 
-    @for (index of dashboard.indices(); track index.name) {
-      <p>{{ index.name }} - {{ index.value }}</p>
-    }
-
-  </app-section-card>
-
-  <app-section-card title="Open Positions">
-
-    @for (position of dashboard.positions(); track position.symbol) {
-      <p>{{ position.symbol }} - {{ position.pnl }}</p>
-    }
-
-  </app-section-card>
+  <app-open-positions></app-open-positions>
 
 </div>
