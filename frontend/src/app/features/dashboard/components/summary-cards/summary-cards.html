@@ -1,0 +1,27 @@
+<div class="summary-grid">
+
+  <app-stat-card
+    title="Portfolio Value"
+    [value]="dashboard.summary().portfolioValue"
+    icon="account_balance_wallet">
+  </app-stat-card>
+
+  <app-stat-card
+    title="Today's P&L"
+    [value]="dashboard.summary().todayPnL"
+    icon="trending_up">
+  </app-stat-card>
+
+  <app-stat-card
+    title="Available Margin"
+    [value]="dashboard.summary().availableMargin"
+    icon="payments">
+  </app-stat-card>
+
+  <app-stat-card
+    title="Open Positions"
+    [value]="dashboard.summary().openPositions"
+    icon="analytics">
+  </app-stat-card>
+
+</div>

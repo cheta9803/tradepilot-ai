@@ -1,32 +1,26 @@
 <app-page-header
-  [title]="'Dashboard'"
-  [subtitle]="'Welcome to TradePilot AI'">
+  title="Dashboard"
+  subtitle="Welcome back">
 </app-page-header>
 
-<div class="stats">
+<app-summary-cards></app-summary-cards>
 
-  <app-stat-card
-    title="Portfolio Value"
-    value="$0"
-    icon="account_balance_wallet">
-  </app-stat-card>
+<div class="widgets">
 
-  <app-stat-card
-    title="Today's P&L"
-    value="$0"
-    icon="trending_up">
-  </app-stat-card>
+  <app-section-card title="Market Indices">
 
-  <app-stat-card
-    title="Available Margin"
-    value="$0"
-    icon="payments">
-  </app-stat-card>
+    @for (index of dashboard.indices(); track index.name) {
+      <p>{{ index.name }} - {{ index.value }}</p>
+    }
 
-  <app-stat-card
-    title="Open Positions"
-    value="0"
-    icon="analytics">
-  </app-stat-card>
+  </app-section-card>
+
+  <app-section-card title="Open Positions">
+
+    @for (position of dashboard.positions(); track position.symbol) {
+      <p>{{ position.symbol }} - {{ position.pnl }}</p>
+    }
+
+  </app-section-card>
 
 </div>
