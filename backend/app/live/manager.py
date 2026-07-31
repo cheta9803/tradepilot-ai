@@ -149,8 +149,6 @@ class LiveManager:
                 )
                 return
 
-            logger.info("RAW TICK: %s", message)
-
             data = LiveParser.parse(
                 message=message,
                 instrument=instrument,

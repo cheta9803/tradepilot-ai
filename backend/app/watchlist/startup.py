@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
-from app.history.loader import HistoryLoader
+from app.history.load_queue import HistoryLoadQueue
 from app.instruments.cache import InstrumentCache
 from app.watchlist.models import Watchlist
 
@@ -24,8 +24,12 @@ class WatchlistStartup:
         try:
 
             subscribed: set[tuple[str, str]] = set()
+            instruments: list[tuple[str, str]] = []
 
-            def subscribe_instrument(exchange: str, symbol: str):
+            def collect(
+                exchange: str,
+                symbol: str,
+            ):
 
                 instrument = InstrumentCache.get_by_symbol(
                     exchange=exchange,
@@ -33,9 +37,6 @@ class WatchlistStartup:
                 )
 
                 if instrument is None:
-                    print(
-                        f"Instrument not found: {exchange} {symbol}"
-                    )
                     return
 
                 key = (
@@ -46,52 +47,55 @@ class WatchlistStartup:
                 if key in subscribed:
                     return
 
-                try:
+                subscribed.add(key)
 
-                    HistoryLoader.load(
-                        exchange=instrument.exchange,
-                        token=instrument.token,
+                instruments.append(
+                    (
+                        instrument.exchange,
+                        instrument.token,
                     )
-
-                    live_manager.subscribe(
-                        exchange=instrument.exchange,
-                        token=instrument.token,
-                    )
-
-                    subscribed.add(key)
-
-                    print(
-                        f"Auto subscribed: "
-                        f"{instrument.symbol} "
-                        f"({instrument.token})"
-                    )
-
-                except Exception as exc:
-                    print(
-                        f"Failed to initialize "
-                        f"{instrument.symbol}: {exc}"
-                    )
-
-            #
-            # Subscribe market indices
-            #
-            for exchange, symbol in WatchlistStartup.INDEX_SYMBOLS:
-                subscribe_instrument(
-                    exchange=exchange,
-                    symbol=symbol,
                 )
 
             #
-            # Subscribe watchlist instruments
+            # Market indices
             #
-            watchlists = db.query(
-                Watchlist,
-            ).all()
+            for exchange, symbol in WatchlistStartup.INDEX_SYMBOLS:
+                collect(exchange, symbol)
 
-            for item in watchlists:
-                subscribe_instrument(
-                    exchange=item.exchange,
-                    symbol=item.symbol,
+            #
+            # Watchlist
+            #
+            for item in db.query(Watchlist).all():
+                collect(
+                    item.exchange,
+                    item.symbol,
+                )
+
+            #
+            # Load history sequentially
+            #
+            HistoryLoadQueue.load(
+                instruments,
+            )
+
+            #
+            # Subscribe after history load
+            #
+            for exchange, token in instruments:
+
+                live_manager.subscribe(
+                    exchange=exchange,
+                    token=token,
+                )
+
+                instrument = InstrumentCache.get_by_token(
+                    token,
+                )
+
+                print(
+                    f"Auto subscribed: "
+                    f"{instrument.symbol} "
+                    f"({token})"
                 )
 
         finally:
