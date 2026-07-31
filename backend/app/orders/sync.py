@@ -58,9 +58,7 @@ class OrderSyncService:
         }
 
         if order.get("average_price") is not None:
-            values["entry_price"] = order[
-                "average_price"
-            ]
+            values["entry_price"] = order["average_price"]
 
         status = order["status"].upper()
 
@@ -101,23 +99,37 @@ class OrderSyncService:
             response = smart_api.orderBook()
 
             if response is None:
+                logger.warning(
+                    "Broker returned no response for order book."
+                )
                 return {}
 
             if not response.get("status"):
+                logger.warning(
+                    "Broker order book request failed: %s",
+                    response,
+                )
                 return {}
 
-            orders = {}
+            orders_data = response.get("data") or []
 
-            for order in response.get("data", []):
+            if not isinstance(orders_data, list):
+                logger.warning(
+                    "Unexpected order book payload: %s",
+                    response,
+                )
+                return {}
+
+            orders: dict[str, dict] = {}
+
+            for order in orders_data:
 
                 order_id = order.get("orderid")
 
                 if not order_id:
                     continue
 
-                average_price = order.get(
-                    "averageprice"
-                )
+                average_price = order.get("averageprice")
 
                 try:
                     average_price = (
@@ -125,10 +137,7 @@ class OrderSyncService:
                         if average_price
                         else None
                     )
-                except (
-                    TypeError,
-                    ValueError,
-                ):
+                except (TypeError, ValueError):
                     average_price = None
 
                 orders[order_id] = {
