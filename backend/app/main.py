@@ -18,6 +18,8 @@ from app.startup.recovery import StartupRecovery
 
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.websocket.router import router as websocket_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -71,3 +73,7 @@ app.add_middleware(
 register_exception_handlers(app)
 
 app.include_router(api_router)
+
+app.include_router(
+    websocket_router,
+)

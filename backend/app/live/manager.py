@@ -1,3 +1,7 @@
+import asyncio
+
+from app.websocket.manager import websocket_manager
+
 from app.candles.service import CandleService
 from app.core.logger import logger
 from app.instruments.cache import InstrumentCache
@@ -158,6 +162,7 @@ class LiveManager:
                 token,
                 data,
             )
+            
 
             CandleService.process_tick(
                 exchange=instrument.exchange,
