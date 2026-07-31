@@ -11,7 +11,7 @@ from app.instruments.api import router as instruments_router
 from app.live.api import router as live_router
 from app.market.api import router as market_router
 from app.orders.router import router as orders_router
-from app.portfolio.api import router as portfolio_router
+from app.portfolio.router import router as portfolio_router
 from app.portfolio.router import router as portfolio_summary_router
 from app.strategy.api import router as strategy_router
 from app.trades.api import router as trades_router

@@ -8,6 +8,12 @@ from app.watchlist.models import Watchlist
 
 class WatchlistStartup:
 
+    INDEX_SYMBOLS = [
+        ("NSE", "NIFTY"),
+        ("NSE", "BANKNIFTY"),
+        ("NSE", "FINNIFTY"),
+    ]
+
     @staticmethod
     def subscribe_all() -> None:
 
@@ -16,21 +22,21 @@ class WatchlistStartup:
         db: Session = SessionLocal()
 
         try:
-            watchlists = db.query(
-                Watchlist,
-            ).all()
 
             subscribed: set[tuple[str, str]] = set()
 
-            for item in watchlists:
+            def subscribe_instrument(exchange: str, symbol: str):
 
                 instrument = InstrumentCache.get_by_symbol(
-                    exchange=item.exchange,
-                    symbol=item.symbol,
+                    exchange=exchange,
+                    symbol=symbol,
                 )
 
                 if instrument is None:
-                    continue
+                    print(
+                        f"Instrument not found: {exchange} {symbol}"
+                    )
+                    return
 
                 key = (
                     instrument.exchange,
@@ -38,17 +44,15 @@ class WatchlistStartup:
                 )
 
                 if key in subscribed:
-                    continue
+                    return
 
                 try:
 
-                    # Load latest historical candle first
                     HistoryLoader.load(
                         exchange=instrument.exchange,
                         token=instrument.token,
                     )
 
-                    # Then subscribe to live data
                     live_manager.subscribe(
                         exchange=instrument.exchange,
                         token=instrument.token,
@@ -67,6 +71,28 @@ class WatchlistStartup:
                         f"Failed to initialize "
                         f"{instrument.symbol}: {exc}"
                     )
+
+            #
+            # Subscribe market indices
+            #
+            for exchange, symbol in WatchlistStartup.INDEX_SYMBOLS:
+                subscribe_instrument(
+                    exchange=exchange,
+                    symbol=symbol,
+                )
+
+            #
+            # Subscribe watchlist instruments
+            #
+            watchlists = db.query(
+                Watchlist,
+            ).all()
+
+            for item in watchlists:
+                subscribe_instrument(
+                    exchange=item.exchange,
+                    symbol=item.symbol,
+                )
 
         finally:
             db.close()
