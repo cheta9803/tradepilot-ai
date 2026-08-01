@@ -32,6 +32,14 @@ export class Dashboard implements OnInit {
 
   private readonly dashboardService = inject(DashboardService);
 
+  constructor() {
+
+    console.log(
+      'Dashboard component created',
+    );
+
+  }
+
   ngOnInit(): void {
     this.dashboardService.load();
   }

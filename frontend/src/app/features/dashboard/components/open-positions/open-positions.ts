@@ -5,6 +5,8 @@ import { MatTableModule } from '@angular/material/table';
 import { SectionCard } from '../../../../shared/ui/section-card/section-card';
 import { DashboardService } from '../../services/dashboard.service';
 
+import { effect } from '@angular/core';
+
 @Component({
   selector: 'app-open-positions',
   imports: [
@@ -29,5 +31,18 @@ export class OpenPositions {
   ];
 
   readonly dataSource = computed(() => this.dashboard.positions());
+
+  constructor() {
+
+    effect(() => {
+
+      console.log(
+        'OpenPositions Component:',
+        this.dataSource(),
+      );
+
+    });
+
+  }
 
 }

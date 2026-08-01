@@ -1,20 +1,19 @@
-import asyncio
-
-from app.websocket.manager import websocket_manager
-
 from app.candles.service import CandleService
 from app.core.logger import logger
 from app.instruments.cache import InstrumentCache
 from app.live.client import LiveClient
 from app.live.parser import LiveParser
 from app.live.redis_cache import LiveCache
+from app.market.service import market_service
 from app.trades.monitor import TradeMonitor
 from app.watchlist.startup import WatchlistStartup
+from app.websocket.manager import websocket_manager
 
 
 class LiveManager:
 
     def __init__(self):
+
         self.client = LiveClient()
 
         self.client.client.on_open = self.on_open
@@ -25,11 +24,19 @@ class LiveManager:
         self.subscribed_tokens: set[str] = set()
 
     def start(self):
-        logger.info("Starting Live WebSocket...")
+
+        logger.info(
+            "Starting Live WebSocket...",
+        )
+
         self.client.connect()
 
     def stop(self):
-        logger.info("Stopping Live WebSocket...")
+
+        logger.info(
+            "Stopping Live WebSocket...",
+        )
+
         self.client.close()
 
     def subscribe(
@@ -39,11 +46,17 @@ class LiveManager:
     ):
 
         if token in self.subscribed_tokens:
-            logger.debug("%s already subscribed.", token)
+
+            logger.debug(
+                "%s already subscribed.",
+                token,
+            )
+
             return
 
         exchange_type = (
-            1 if exchange == "NSE"
+            1
+            if exchange == "NSE"
             else 3
         )
 
@@ -60,14 +73,21 @@ class LiveManager:
             token_list=[
                 {
                     "exchangeType": exchange_type,
-                    "tokens": [token],
-                }
+                    "tokens": [
+                        token,
+                    ],
+                },
             ],
         )
 
-        self.subscribed_tokens.add(token)
+        self.subscribed_tokens.add(
+            token,
+        )
 
-        logger.info("Subscription request sent for %s.", token)
+        logger.info(
+            "Subscription request sent for %s.",
+            token,
+        )
 
     def unsubscribe(
         self,
@@ -76,11 +96,17 @@ class LiveManager:
     ):
 
         if token not in self.subscribed_tokens:
-            logger.debug("%s is not subscribed.", token)
+
+            logger.debug(
+                "%s is not subscribed.",
+                token,
+            )
+
             return
 
         exchange_type = (
-            1 if exchange == "NSE"
+            1
+            if exchange == "NSE"
             else 3
         )
 
@@ -97,24 +123,43 @@ class LiveManager:
             token_list=[
                 {
                     "exchangeType": exchange_type,
-                    "tokens": [token],
-                }
+                    "tokens": [
+                        token,
+                    ],
+                },
             ],
         )
 
-        self.subscribed_tokens.remove(token)
+        self.subscribed_tokens.remove(
+            token,
+        )
 
-        logger.info("Unsubscribe request sent for %s.", token)
+        logger.info(
+            "Unsubscribe request sent for %s.",
+            token,
+        )
 
-    def on_open(self, ws):
-        logger.info("Live WebSocket Connected")
+    def on_open(
+        self,
+        ws,
+    ):
+
+        logger.info(
+            "Live WebSocket Connected",
+        )
 
         self.client.mark_connected()
 
         WatchlistStartup.subscribe_all()
 
-    def on_close(self, ws):
-        logger.warning("Live WebSocket Closed")
+    def on_close(
+        self,
+        ws,
+    ):
+
+        logger.warning(
+            "Live WebSocket Closed",
+        )
 
         self.client.mark_disconnected()
 
@@ -123,6 +168,7 @@ class LiveManager:
         ws,
         error,
     ):
+
         logger.exception(
             "Live WebSocket Error: %s",
             error,
@@ -136,21 +182,28 @@ class LiveManager:
 
         try:
 
-            logger.debug("Tick received: %s", message)
+            logger.debug(
+                "Tick received: %s",
+                message,
+            )
 
             token = str(
-                message.get("token")
+                message.get(
+                    "token",
+                ),
             )
 
             instrument = InstrumentCache.get_by_token(
-                token
+                token,
             )
 
             if instrument is None:
+
                 logger.warning(
                     "Unknown instrument token received: %s",
                     token,
                 )
+
                 return
 
             data = LiveParser.parse(
@@ -162,7 +215,19 @@ class LiveManager:
                 token,
                 data,
             )
-            
+
+            market_service.update_tick(
+                data,
+            )
+
+            broadcast_data = {
+                **data,
+                "timestamp": data["timestamp"].isoformat(),
+            }
+
+            websocket_manager.broadcast_threadsafe(
+                broadcast_data,
+            )
 
             CandleService.process_tick(
                 exchange=instrument.exchange,
@@ -177,6 +242,7 @@ class LiveManager:
                 "1m",
                 "5m",
             ):
+
                 TradeMonitor.update(
                     exchange=instrument.exchange,
                     token=instrument.token,
@@ -186,5 +252,5 @@ class LiveManager:
         except Exception:
 
             logger.exception(
-                "Unhandled exception while processing live tick."
+                "Unhandled exception while processing live tick.",
             )

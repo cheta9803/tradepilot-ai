@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
+import asyncio
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.angel.client import AngelClient
 from app.api.router import api_router
@@ -13,24 +15,32 @@ from app.execution.instance import execution_manager
 from app.history.rebuilder import HistoryRebuilder
 from app.instruments.cache import InstrumentCache
 from app.live.instance import live_manager
-
 from app.startup.recovery import StartupRecovery
-
-from fastapi.middleware.cors import CORSMiddleware
-
+from app.websocket.manager import websocket_manager
 from app.websocket.router import router as websocket_router
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(
+    app: FastAPI,
+):
+
+    websocket_manager.set_loop(
+        asyncio.get_running_loop(),
+    )
 
     InstrumentCache.load()
 
     db = SessionLocal()
 
     try:
-        CandleHistoryLoader.load(db)
+
+        CandleHistoryLoader.load(
+            db,
+        )
+
     finally:
+
         db.close()
 
     HistoryRebuilder.rebuild()
@@ -43,7 +53,9 @@ async def lifespan(app: FastAPI):
 
     live_manager.start()
 
-    logger.info("TradePilot AI started")
+    logger.info(
+        "TradePilot AI started",
+    )
 
     yield
 
@@ -51,7 +63,9 @@ async def lifespan(app: FastAPI):
 
     live_manager.stop()
 
-    logger.info("TradePilot AI stopped")
+    logger.info(
+        "TradePilot AI stopped",
+    )
 
 
 app = FastAPI(
@@ -70,9 +84,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-register_exception_handlers(app)
+register_exception_handlers(
+    app,
+)
 
-app.include_router(api_router)
+app.include_router(
+    api_router,
+)
 
 app.include_router(
     websocket_router,

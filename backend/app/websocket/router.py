@@ -2,15 +2,20 @@ from fastapi import APIRouter
 from fastapi import WebSocket
 from fastapi import WebSocketDisconnect
 
+from app.core.logger import logger
 from app.websocket.manager import websocket_manager
 from app.websocket.schemas import BroadcastTickRequest
 
 router = APIRouter(
-    tags=["WebSocket"],
+    tags=[
+        "WebSocket",
+    ],
 )
 
 
-@router.websocket("/ws/market")
+@router.websocket(
+    "/ws/market",
+)
 async def market_socket(
     websocket: WebSocket,
 ):
@@ -22,16 +27,28 @@ async def market_socket(
     try:
 
         while True:
+
             await websocket.receive_text()
 
-    except WebSocketDisconnect:
+    except (
+        WebSocketDisconnect,
+        RuntimeError,
+    ):
+
+        logger.info(
+            "Frontend websocket disconnected.",
+        )
+
+    finally:
 
         websocket_manager.disconnect(
             websocket,
         )
 
 
-@router.post("/api/v1/websocket/test")
+@router.post(
+    "/api/v1/websocket/test",
+)
 async def broadcast_test(
     request: BroadcastTickRequest,
 ):

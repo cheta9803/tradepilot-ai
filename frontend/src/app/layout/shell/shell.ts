@@ -19,5 +19,14 @@ import { LayoutService } from '../services/layout.service';
   styleUrl: './shell.scss',
 })
 export class Shell {
+
   readonly layout = inject(LayoutService);
+
+  constructor() {
+
+    console.log(
+      'Shell component created',
+    );
+
+  }
 }

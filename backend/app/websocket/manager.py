@@ -1,4 +1,7 @@
+import asyncio
+
 from fastapi import WebSocket
+from starlette.websockets import WebSocketState
 
 from app.core.logger import logger
 
@@ -9,10 +12,33 @@ class WebSocketManager:
 
         self.connections: list[WebSocket] = []
 
+        self.loop: asyncio.AbstractEventLoop | None = None
+
+        logger.info(
+            "WebSocketManager created id=%s",
+            hex(id(self)),
+        )
+
+    def set_loop(
+        self,
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+
+        self.loop = loop
+
+        logger.info(
+            "Event loop registered.",
+        )
+
     async def connect(
         self,
         websocket: WebSocket,
     ) -> None:
+
+        logger.info(
+            "CONNECT manager=%s",
+            hex(id(self)),
+        )
 
         await websocket.accept()
 
@@ -30,7 +56,7 @@ class WebSocketManager:
         websocket: WebSocket,
     ) -> None:
 
-        if websocket in self.connections:
+        while websocket in self.connections:
 
             self.connections.remove(
                 websocket,
@@ -41,6 +67,19 @@ class WebSocketManager:
             len(self.connections),
         )
 
+    def broadcast_threadsafe(
+        self,
+        message: dict,
+    ) -> None:
+
+        if self.loop is None:
+            return
+
+        asyncio.run_coroutine_threadsafe(
+            self.broadcast(message),
+            self.loop,
+        )
+
     async def broadcast(
         self,
         message: dict,
@@ -48,7 +87,21 @@ class WebSocketManager:
 
         disconnected: list[WebSocket] = []
 
-        for connection in self.connections:
+        for index, connection in enumerate(list(self.connections)):
+
+            logger.info(
+                "Connection %d state=%s",
+                index,
+                connection.client_state,
+            )
+
+            if connection.client_state != WebSocketState.CONNECTED:
+
+                disconnected.append(
+                    connection,
+                )
+
+                continue
 
             try:
 
@@ -56,7 +109,17 @@ class WebSocketManager:
                     message,
                 )
 
+                logger.info(
+                    "Successfully sent to connection %d",
+                    index,
+                )
+
             except Exception:
+
+                logger.exception(
+                    "Failed sending to connection %d",
+                    index,
+                )
 
                 disconnected.append(
                     connection,
