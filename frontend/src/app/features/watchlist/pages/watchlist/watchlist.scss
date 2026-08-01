@@ -1,0 +1,129 @@
+:host {
+
+    display: block;
+
+}
+
+.loading,
+.empty {
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    padding: 48px;
+
+    color: #757575;
+
+    font-size: 14px;
+
+}
+
+table {
+
+    width: 100%;
+
+}
+
+.symbol {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 2px;
+
+}
+
+.symbol strong {
+
+    font-weight: 600;
+
+}
+
+.symbol small {
+
+    color: #757575;
+
+    font-size: 12px;
+
+}
+
+.positive {
+
+    color: #2e7d32;
+
+    font-weight: 600;
+
+}
+
+.negative {
+
+    color: #d32f2f;
+
+    font-weight: 600;
+
+}
+
+.mat-mdc-row:hover {
+
+    background: rgba(255,
+            255,
+            255,
+            0.03);
+
+}
+
+.mat-column-actions {
+
+    width: 72px;
+
+    text-align: center;
+
+}
+
+.mat-column-ltp,
+.mat-column-change,
+.mat-column-changePercent,
+.mat-column-volume {
+
+    text-align: right;
+
+}
+
+.mat-mdc-cell,
+.mat-mdc-header-cell {
+
+    padding: 14px 16px;
+
+}
+
+.toolbar {
+
+    display: flex;
+
+    gap: 16px;
+
+    align-items: center;
+
+    flex-wrap: wrap;
+
+    margin-bottom: 8px;
+
+}
+
+.symbol-field {
+
+    flex: 1;
+
+    min-width: 240px;
+
+}
+
+mat-form-field {
+
+    min-width: 160px;
+
+}
