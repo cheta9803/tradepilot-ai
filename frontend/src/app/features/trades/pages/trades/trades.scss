@@ -1,0 +1,37 @@
+.loading,
+.empty {
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    min-height: 250px;
+
+}
+
+.trades-table {
+
+    width: 100%;
+
+    border-collapse: collapse;
+
+}
+
+.trades-table th,
+.trades-table td {
+
+    padding: 12px;
+
+    border-bottom: 1px solid #e0e0e0;
+
+    text-align: left;
+
+}
+
+.trades-table th {
+
+    font-weight: 600;
+
+}

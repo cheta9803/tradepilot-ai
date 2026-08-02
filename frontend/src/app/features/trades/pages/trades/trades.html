@@ -1,1 +1,126 @@
-<p>trades works!</p>
+<app-page-header title="Trades" subtitle="Active and historical trades">
+</app-page-header>
+
+<app-section-card title="Trades">
+
+    @if (loading()) {
+
+    <div class="loading">
+
+        <mat-spinner diameter="40">
+        </mat-spinner>
+
+    </div>
+
+    } @else if (trades().length === 0) {
+
+    <div class="empty">
+
+        No trades found.
+
+    </div>
+
+    } @else {
+
+    <table class="trades-table">
+
+        <thead>
+
+            <tr>
+
+                <th>Symbol</th>
+
+                <th>Signal</th>
+
+                <th>State</th>
+
+                <th>Entry</th>
+
+                <th>Current</th>
+
+                <th>P&amp;L</th>
+
+                <th>Qty</th>
+
+                <th>Target</th>
+
+                <th>SL</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @for (
+            trade of trades();
+            track trade.symbol + trade.timeframe
+            ) {
+
+            <tr>
+
+                <td>
+
+                    {{ trade.symbol }}
+
+                </td>
+
+                <td>
+
+                    {{ trade.signal }}
+
+                </td>
+
+                <td>
+
+                    {{ trade.state }}
+
+                </td>
+
+                <td>
+
+                    {{ trade.entry_price | number:'1.2-2' }}
+
+                </td>
+
+                <td>
+
+                    {{ trade.current_price | number:'1.2-2' }}
+
+                </td>
+
+                <td>
+
+                    {{ trade.pnl | number:'1.2-2' }}
+
+                </td>
+
+                <td>
+
+                    {{ trade.quantity }}
+
+                </td>
+
+                <td>
+
+                    {{ trade.target | number:'1.2-2' }}
+
+                </td>
+
+                <td>
+
+                    {{ trade.stop_loss | number:'1.2-2' }}
+
+                </td>
+
+            </tr>
+
+            }
+
+        </tbody>
+
+    </table>
+
+    }
+
+</app-section-card>
