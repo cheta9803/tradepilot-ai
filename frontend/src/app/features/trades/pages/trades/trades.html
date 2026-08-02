@@ -1,125 +1,240 @@
-<app-page-header title="Trades" subtitle="Active and historical trades">
+<app-page-header
+    title="Trades"
+    subtitle="Monitor paper and live trades">
 </app-page-header>
 
-<app-section-card title="Trades">
+<app-section-card
+    title="Trades">
+
+    <div class="toolbar">
+
+        <div class="stats">
+
+            <mat-chip>
+
+                Total {{ totalTrades() }}
+
+            </mat-chip>
+
+            <mat-chip>
+
+                Open {{ openTrades() }}
+
+            </mat-chip>
+
+            <mat-chip>
+
+                Closed {{ closedTrades() }}
+
+            </mat-chip>
+
+            <mat-chip
+                [ngClass]="
+                    totalPnl() >= 0
+                        ? 'profit-chip'
+                        : 'loss-chip'
+                ">
+
+                P&L {{ totalPnl() | number:'1.2-2' }}
+
+            </mat-chip>
+
+        </div>
+
+        <button
+            mat-raised-button
+            color="primary"
+            (click)="refresh()">
+
+            <mat-icon>
+
+                refresh
+
+            </mat-icon>
+
+            Refresh
+
+        </button>
+
+    </div>
 
     @if (loading()) {
 
-    <div class="loading">
+        <div class="loading">
 
-        <mat-spinner diameter="40">
-        </mat-spinner>
+            <mat-spinner
+                diameter="40">
+            </mat-spinner>
 
-    </div>
+        </div>
 
     } @else if (trades().length === 0) {
 
-    <div class="empty">
+        <div class="empty">
 
-        No trades found.
+            No trades available.
 
-    </div>
+        </div>
 
     } @else {
 
-    <table class="trades-table">
+        <table class="trades-table">
 
-        <thead>
+            <thead>
 
-            <tr>
+                <tr>
 
-                <th>Symbol</th>
+                    <th>Symbol</th>
 
-                <th>Signal</th>
+                    <th>Signal</th>
 
-                <th>State</th>
+                    <th>Status</th>
 
-                <th>Entry</th>
+                    <th>Mode</th>
 
-                <th>Current</th>
+                    <th>Entry</th>
 
-                <th>P&amp;L</th>
+                    <th>Current</th>
 
-                <th>Qty</th>
+                    <th>P&amp;L</th>
 
-                <th>Target</th>
+                    <th>Qty</th>
 
-                <th>SL</th>
+                    <th>Target</th>
 
-            </tr>
+                    <th>SL</th>
 
-        </thead>
+                    <th>Updated</th>
 
-        <tbody>
+                </tr>
 
-            @for (
-            trade of trades();
-            track trade.symbol + trade.timeframe
-            ) {
+            </thead>
 
-            <tr>
+            <tbody>
 
-                <td>
+                @for (
+                    trade of trades();
+                    track trade.token + trade.timeframe
+                ) {
 
-                    {{ trade.symbol }}
+                    <tr>
 
-                </td>
+                        <td>
 
-                <td>
+                            <strong>
 
-                    {{ trade.signal }}
+                                {{ trade.symbol }}
 
-                </td>
+                            </strong>
 
-                <td>
+                            <br>
 
-                    {{ trade.state }}
+                            <small>
 
-                </td>
+                                {{ trade.timeframe }}
 
-                <td>
+                            </small>
 
-                    {{ trade.entry_price | number:'1.2-2' }}
+                        </td>
 
-                </td>
+                        <td>
 
-                <td>
+                            <mat-chip
+                                [ngClass]="
+                                    signalClass(
+                                        trade
+                                    )
+                                ">
 
-                    {{ trade.current_price | number:'1.2-2' }}
+                                {{ trade.signal }}
 
-                </td>
+                            </mat-chip>
 
-                <td>
+                        </td>
 
-                    {{ trade.pnl | number:'1.2-2' }}
+                        <td>
 
-                </td>
+                            <mat-chip
+                                [ngClass]="
+                                    stateClass(
+                                        trade
+                                    )
+                                ">
 
-                <td>
+                                {{ trade.state }}
 
-                    {{ trade.quantity }}
+                            </mat-chip>
 
-                </td>
+                        </td>
 
-                <td>
+                        <td>
 
-                    {{ trade.target | number:'1.2-2' }}
+                            <mat-chip>
 
-                </td>
+                                {{ trade.execution_mode }}
 
-                <td>
+                            </mat-chip>
 
-                    {{ trade.stop_loss | number:'1.2-2' }}
+                        </td>
 
-                </td>
+                        <td>
 
-            </tr>
+                            {{ trade.entry_price | number:'1.2-2' }}
 
-            }
+                        </td>
 
-        </tbody>
+                        <td>
 
-    </table>
+                            {{ trade.current_price | number:'1.2-2' }}
+
+                        </td>
+
+                        <td>
+
+                            <span
+                                [ngClass]="
+                                    pnlClass(
+                                        trade
+                                    )
+                                ">
+
+                                {{ trade.pnl | number:'1.2-2' }}
+
+                            </span>
+
+                        </td>
+
+                        <td>
+
+                            {{ trade.quantity }}
+
+                        </td>
+
+                        <td>
+
+                            {{ trade.target | number:'1.2-2' }}
+
+                        </td>
+
+                        <td>
+
+                            {{ trade.stop_loss | number:'1.2-2' }}
+
+                        </td>
+
+                        <td>
+
+                            {{ trade.updated_at | date:'short' }}
+
+                        </td>
+
+                    </tr>
+
+                }
+
+            </tbody>
+
+        </table>
 
     }
 

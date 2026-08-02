@@ -12,7 +12,13 @@ export interface Trade {
 
     signal: string;
 
+    execution_mode: string;
+
     entry_price: number;
+
+    current_price: number;
+
+    exit_price: number | null;
 
     stop_loss: number;
 
@@ -20,9 +26,9 @@ export interface Trade {
 
     quantity: number;
 
-    current_price: number;
-
     pnl: number;
+
+    reason: string | null;
 
     order_id: string | null;
 

@@ -1,3 +1,29 @@
+.toolbar {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 24px;
+
+    gap: 16px;
+
+    flex-wrap: wrap;
+
+}
+
+.stats {
+
+    display: flex;
+
+    gap: 12px;
+
+    flex-wrap: wrap;
+
+}
+
 .loading,
 .empty {
 
@@ -7,7 +33,9 @@
 
     align-items: center;
 
-    min-height: 250px;
+    min-height: 300px;
+
+    color: #757575;
 
 }
 
@@ -19,19 +47,152 @@
 
 }
 
-.trades-table th,
-.trades-table td {
-
-    padding: 12px;
-
-    border-bottom: 1px solid #e0e0e0;
+.trades-table th {
 
     text-align: left;
 
-}
-
-.trades-table th {
+    font-size: 13px;
 
     font-weight: 600;
+
+    padding: 14px;
+
+    border-bottom: 2px solid #e5e7eb;
+
+    white-space: nowrap;
+
+}
+
+.trades-table td {
+
+    padding: 14px;
+
+    border-bottom: 1px solid #eeeeee;
+
+    vertical-align: middle;
+
+}
+
+.trades-table tbody tr:hover {
+
+    background: #fafafa;
+
+}
+
+.buy {
+
+    background: #e8f5e9 !important;
+
+    color: #2e7d32 !important;
+
+}
+
+.sell {
+
+    background: #ffebee !important;
+
+    color: #c62828 !important;
+
+}
+
+.hold {
+
+    background: #fff8e1 !important;
+
+    color: #f57f17 !important;
+
+}
+
+.buy-active {
+
+    background: #c8e6c9 !important;
+
+    color: #1b5e20 !important;
+
+}
+
+.sell-active {
+
+    background: #ffcdd2 !important;
+
+    color: #b71c1c !important;
+
+}
+
+.entry-ready {
+
+    background: #e3f2fd !important;
+
+    color: #1565c0 !important;
+
+}
+
+.wait {
+
+    background: #f3f4f6 !important;
+
+    color: #374151 !important;
+
+}
+
+.exit {
+
+    background: #eceff1 !important;
+
+    color: #455a64 !important;
+
+}
+
+.profit {
+
+    color: #2e7d32;
+
+    font-weight: 700;
+
+}
+
+.loss {
+
+    color: #d32f2f;
+
+    font-weight: 700;
+
+}
+
+.neutral {
+
+    color: #757575;
+
+    font-weight: 700;
+
+}
+
+.profit-chip {
+
+    background: #e8f5e9 !important;
+
+}
+
+.loss-chip {
+
+    background: #ffebee !important;
+
+}
+
+small {
+
+    color: #757575;
+
+}
+
+@media (max-width: 1100px) {
+
+    .trades-table {
+
+        display: block;
+
+        overflow-x: auto;
+
+    }
 
 }
