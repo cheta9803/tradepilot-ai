@@ -24,6 +24,10 @@ import {
     StrategyService,
 } from '../services/strategy.service';
 
+import {
+    PaperTradingService,
+} from '../../paper-trading/services/paper-trading.service';
+
 @Injectable({
     providedIn: 'root',
 })
@@ -31,6 +35,10 @@ export class StrategyStore {
 
     private readonly service = inject(
         StrategyService,
+    );
+
+    private readonly paperTradingService = inject(
+        PaperTradingService,
     );
 
     private readonly snackBar = inject(
@@ -42,6 +50,10 @@ export class StrategyStore {
     >(null);
 
     readonly loading = signal(
+        false,
+    );
+
+    readonly creatingPaperTrade = signal(
         false,
     );
 
@@ -91,6 +103,74 @@ export class StrategyStore {
                     this.snackBar.open(
                         error.error?.detail ??
                         'Unable to load strategy.',
+                        'Close',
+                        {
+                            duration: 3000,
+                        },
+                    );
+
+                },
+
+            });
+
+    }
+
+    createPaperTrade(): void {
+
+        const strategy = this.strategy();
+
+        if (!strategy) {
+
+            return;
+
+        }
+
+        this.creatingPaperTrade.set(
+            true,
+        );
+
+        this.paperTradingService
+            .create({
+
+                exchange: 'NSE',
+
+                token: strategy.token,
+
+                timeframe: strategy.timeframe,
+
+            })
+            .pipe(
+                finalize(() => {
+
+                    this.creatingPaperTrade.set(
+                        false,
+                    );
+
+                }),
+            )
+            .subscribe({
+
+                next: (
+                    response: { message: string },
+                ) => {
+
+                    this.snackBar.open(
+                        response.message,
+                        'Close',
+                        {
+                            duration: 3000,
+                        },
+                    );
+
+                },
+
+                error: (
+                    error: HttpErrorResponse,
+                ) => {
+
+                    this.snackBar.open(
+                        error.error?.detail ??
+                        'Unable to create paper trade.',
                         'Close',
                         {
                             duration: 3000,

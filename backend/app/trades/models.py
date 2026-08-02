@@ -49,6 +49,8 @@ class Trade:
 
     broker: str | None = None
 
+    execution_mode: str = "PAPER"
+
     # -------------------------
     # Risk State
     # -------------------------

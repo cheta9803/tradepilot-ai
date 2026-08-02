@@ -84,6 +84,8 @@ class StrategyService:
         )
 
         result = {
+            "exchange": instrument.exchange,
+            "token": instrument.token,
             "symbol": symbol,
             "timeframe": timeframe,
             "trend": trend,

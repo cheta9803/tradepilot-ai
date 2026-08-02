@@ -1,15 +1,11 @@
-<app-page-header
-    title="AI Strategy"
-    subtitle="AI generated trading recommendation">
+<app-page-header title="AI Strategy" subtitle="AI generated trading recommendation">
 </app-page-header>
 
 <app-section-card title="Analyze Symbol">
 
     <div class="toolbar">
 
-        <mat-form-field
-            appearance="outline"
-            class="symbol-field">
+        <mat-form-field appearance="outline" class="symbol-field">
 
             <mat-label>
 
@@ -17,17 +13,11 @@
 
             </mat-label>
 
-            <input
-                matInput
-                [(ngModel)]="symbol"
-                placeholder="RELIANCE">
+            <input matInput [(ngModel)]="symbol" placeholder="RELIANCE">
 
         </mat-form-field>
 
-        <button
-            mat-flat-button
-            color="primary"
-            (click)="load()">
+        <button mat-flat-button color="primary" (click)="load()">
 
             Analyze
 
@@ -113,8 +103,7 @@
 
             </label>
 
-            <strong
-                [ngClass]="{
+            <strong [ngClass]="{
                     buy: s.signal === 'BUY',
                     sell: s.signal === 'SELL',
                     hold: s.signal === 'HOLD'
@@ -344,17 +333,16 @@
 
     <div class="actions">
 
-        <button
-            mat-flat-button
-            color="primary">
+        <button mat-raised-button color="primary" [disabled]="
+        !store.strategy()?.tradable ||
+        store.creatingPaperTrade()
+    " (click)="store.createPaperTrade()">
 
             Paper Trade
 
         </button>
 
-        <button
-            mat-flat-button
-            color="accent">
+        <button mat-flat-button color="accent">
 
             Live Trade
 

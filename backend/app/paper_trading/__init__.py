@@ -1,3 +1,5 @@
-from .models import PaperOrder
+from .models import PaperTrade
 
-__all__ = ['PaperOrder']
+__all__ = [
+    "PaperTrade",
+]

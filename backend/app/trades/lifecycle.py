@@ -22,6 +22,7 @@ class TradeLifecycle:
         stop_loss: float,
         target: float,
         quantity: int,
+        execution_mode: str = "PAPER",
     ) -> None:
 
         existing = TradeCache.get(
@@ -61,6 +62,7 @@ class TradeLifecycle:
                         "breakeven_done": False,
 
                         "updated_at": datetime.now().isoformat(),
+                        "execution_mode": execution_mode,
                     }
                 )
 
@@ -86,6 +88,7 @@ class TradeLifecycle:
             stop_loss=stop_loss,
             target=target,
             quantity=quantity,
+            execution_mode=execution_mode,
 
             # -------------------------
             # Risk State

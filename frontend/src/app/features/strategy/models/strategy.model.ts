@@ -1,39 +1,43 @@
 export interface StrategyResponse {
 
-  symbol: string;
+    exchange: string;
 
-  timeframe: string;
+    token: string;
 
-  trend: string;
+    symbol: string;
 
-  signal: string;
+    timeframe: string;
 
-  confidence: number;
+    trend: string;
 
-  tradable: boolean;
+    signal: string;
 
-  entry: number;
+    confidence: number;
 
-  stop_loss: number;
+    tradable: boolean;
 
-  target: number;
+    entry: number;
 
-  risk_reward: number;
+    stop_loss: number;
 
-  ema20: number;
+    target: number;
 
-  ema50: number;
+    risk_reward: number;
 
-  rsi14: number;
+    ema20: number;
 
-  atr14: number;
+    ema50: number;
 
-  vwap: number;
+    rsi14: number;
 
-  macd: number;
+    atr14: number;
 
-  signal_line: number;
+    vwap: number | null;
 
-  reasons: string[];
+    macd: number;
+
+    signal_line: number;
+
+    reasons: string[];
 
 }

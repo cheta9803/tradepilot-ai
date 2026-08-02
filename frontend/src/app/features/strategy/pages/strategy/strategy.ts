@@ -65,7 +65,7 @@ export class Strategy implements OnInit {
         ActivatedRoute,
     );
 
-    private readonly store = inject(
+    readonly store = inject(
         StrategyStore,
     );
 

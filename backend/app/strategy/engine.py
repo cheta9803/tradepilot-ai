@@ -103,6 +103,8 @@ class StrategyEngine:
             token=token,
             timeframe=timeframe,
             values={
+                "exchange": instrument.exchange,
+                "token": instrument.token,
                 "symbol": instrument.symbol,
                 "timeframe": timeframe,
                 "trend": trend,
@@ -144,6 +146,7 @@ class StrategyEngine:
                 stop_loss=stop_loss,
                 target=target,
                 quantity=position["quantity"],
+                execution_mode="LIVE",
             )
 
             ExecutionEngine.process()

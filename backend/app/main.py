@@ -18,6 +18,7 @@ from app.live.instance import live_manager
 from app.startup.recovery import StartupRecovery
 from app.websocket.manager import websocket_manager
 from app.websocket.router import router as websocket_router
+from app.paper_trading.api import router as paper_trading_router
 
 
 @asynccontextmanager
@@ -94,4 +95,8 @@ app.include_router(
 
 app.include_router(
     websocket_router,
+)
+
+app.include_router(
+    paper_trading_router,
 )

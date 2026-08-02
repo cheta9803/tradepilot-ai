@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
+from fastapi import HTTPException
+from fastapi import Query
 
 from app.strategy.schemas import StrategyResponse
 from app.strategy.service import StrategyService
@@ -17,9 +19,21 @@ service = StrategyService()
 )
 async def intraday(
     symbol: str,
-    timeframe: str = Query(default="1m"),
+    timeframe: str = Query(
+        default="1m",
+    ),
 ):
-    return service.analyze(
-        symbol=symbol.upper(),
-        timeframe=timeframe,
-    )
+
+    try:
+
+        return service.analyze(
+            symbol=symbol.upper(),
+            timeframe=timeframe,
+        )
+
+    except ValueError as exc:
+
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
