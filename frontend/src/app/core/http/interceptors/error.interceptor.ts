@@ -1,16 +1,66 @@
-import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
-import { catchError, throwError } from 'rxjs';
+import {
+    HttpErrorResponse,
+    HttpInterceptorFn,
+} from '@angular/common/http';
 
-export const errorInterceptor: HttpInterceptorFn = (req, next) => {
+import {
+    inject,
+} from '@angular/core';
 
-  return next(req).pipe(
-    catchError((error: HttpErrorResponse) => {
+import {
+    Router,
+} from '@angular/router';
 
-      console.error(error);
+import {
+    catchError,
+    throwError,
+} from 'rxjs';
 
-      return throwError(() => error);
+import {
+    AuthStore,
+} from '../../../features/auth/state/auth.store';
 
-    }),
-  );
+export const errorInterceptor: HttpInterceptorFn = (
+    req,
+    next,
+) => {
+
+    const router = inject(
+        Router,
+    );
+
+    const authStore = inject(
+        AuthStore,
+    );
+
+    return next(
+        req,
+    ).pipe(
+
+        catchError(
+            (
+                error: HttpErrorResponse,
+            ) => {
+
+                if (
+                    error.status === 401
+                ) {
+
+                    authStore.logout();
+
+                    router.navigate([
+                        '/login',
+                    ]);
+
+                }
+
+                return throwError(
+                    () => error,
+                );
+
+            },
+        ),
+
+    );
 
 };

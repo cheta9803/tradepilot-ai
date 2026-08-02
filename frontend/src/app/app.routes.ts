@@ -14,19 +14,37 @@ import {
     Register,
 } from './features/auth/pages/register/register';
 
+import {
+    authGuard,
+} from './features/auth/guards/auth.guard';
+
+import {
+    guestGuard,
+} from './features/auth/guards/guest.guard';
+
 export const routes: Routes = [
 
     {
         path: 'login',
         component: Login,
+        canActivate: [
+            guestGuard,
+        ],
     },
+
     {
         path: 'register',
         component: Register,
+        canActivate: [
+            guestGuard,
+        ],
     },
     {
         path: '',
         component: Shell,
+        canActivate: [
+            authGuard,
+        ],
 
         children: [
 
