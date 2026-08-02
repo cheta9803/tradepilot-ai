@@ -4,26 +4,84 @@
     mat-icon-button
     (click)="toggleSidebar()">
 
-    <mat-icon>menu</mat-icon>
+    <mat-icon>
+
+      menu
+
+    </mat-icon>
 
   </button>
 
   <span class="title">
+
     TradePilot AI
+
   </span>
 
   <span class="spacer"></span>
 
-  <button mat-icon-button>
+  <button
+    mat-icon-button>
 
-    <mat-icon>notifications</mat-icon>
+    <mat-icon>
+
+      notifications
+
+    </mat-icon>
 
   </button>
 
-  <button mat-icon-button>
+  <button
+    mat-icon-button
+    [matMenuTriggerFor]="userMenu">
 
-    <mat-icon>account_circle</mat-icon>
+    <mat-icon>
+
+      account_circle
+
+    </mat-icon>
 
   </button>
 
 </mat-toolbar>
+
+<mat-menu
+  #userMenu="matMenu">
+
+  <button
+    mat-menu-item
+    disabled>
+
+    {{ authStore.currentUser()?.full_name || 'Guest' }}
+
+  </button>
+
+  <button
+    mat-menu-item
+    disabled>
+
+    {{ authStore.currentUser()?.role || '' }}
+
+  </button>
+
+  <mat-divider></mat-divider>
+
+  <button
+    mat-menu-item
+    (click)="logout()">
+
+    <mat-icon>
+
+      logout
+
+    </mat-icon>
+
+    <span>
+
+      Logout
+
+    </span>
+
+  </button>
+
+</mat-menu>

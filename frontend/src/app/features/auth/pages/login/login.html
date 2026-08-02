@@ -1,0 +1,64 @@
+<div class="login-page">
+
+    <mat-card>
+
+        <h2>
+
+            TradePilot AI
+
+        </h2>
+
+        <form
+            [formGroup]="form"
+            (ngSubmit)="submit()">
+
+            <mat-form-field appearance="outline">
+
+                <mat-label>
+
+                    Email
+
+                </mat-label>
+
+                <input
+                    matInput
+                    formControlName="email">
+
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+
+                <mat-label>
+
+                    Password
+
+                </mat-label>
+
+                <input
+                    matInput
+                    type="password"
+                    formControlName="password">
+
+            </mat-form-field>
+
+            <button
+                mat-raised-button
+                color="primary"
+                type="submit">
+
+                Login
+
+            </button>
+
+        </form>
+
+        <a
+            routerLink="/register">
+
+            Create Account
+
+        </a>
+
+    </mat-card>
+
+</div>

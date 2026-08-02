@@ -1,0 +1,78 @@
+<div class="login-page">
+
+    <mat-card>
+
+        <h2>
+
+            Create Account
+
+        </h2>
+
+        <form
+            [formGroup]="form"
+            (ngSubmit)="submit()">
+
+            <mat-form-field appearance="outline">
+
+                <mat-label>
+
+                    Full Name
+
+                </mat-label>
+
+                <input
+                    matInput
+                    formControlName="full_name">
+
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+
+                <mat-label>
+
+                    Email
+
+                </mat-label>
+
+                <input
+                    matInput
+                    formControlName="email">
+
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+
+                <mat-label>
+
+                    Password
+
+                </mat-label>
+
+                <input
+                    matInput
+                    type="password"
+                    formControlName="password">
+
+            </mat-form-field>
+
+            <button
+                mat-raised-button
+                color="primary"
+                type="submit">
+
+                Register
+
+            </button>
+
+        </form>
+
+        <a
+            routerLink="/login">
+
+            Already have an account?
+
+        </a>
+
+    </mat-card>
+
+</div>
