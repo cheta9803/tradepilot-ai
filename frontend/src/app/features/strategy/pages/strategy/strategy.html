@@ -1,0 +1,367 @@
+<app-page-header
+    title="AI Strategy"
+    subtitle="AI generated trading recommendation">
+</app-page-header>
+
+<app-section-card title="Analyze Symbol">
+
+    <div class="toolbar">
+
+        <mat-form-field
+            appearance="outline"
+            class="symbol-field">
+
+            <mat-label>
+
+                Symbol
+
+            </mat-label>
+
+            <input
+                matInput
+                [(ngModel)]="symbol"
+                placeholder="RELIANCE">
+
+        </mat-form-field>
+
+        <button
+            mat-flat-button
+            color="primary"
+            (click)="load()">
+
+            Analyze
+
+        </button>
+
+    </div>
+
+</app-section-card>
+
+@if (loading()) {
+
+<app-section-card title="Strategy">
+
+    <div class="loading">
+
+        Loading strategy...
+
+    </div>
+
+</app-section-card>
+
+}
+
+@if (strategy(); as s) {
+
+<app-section-card title="Recommendation">
+
+    <div class="grid">
+
+        <div>
+
+            <label>
+
+                Symbol
+
+            </label>
+
+            <strong>
+
+                {{ s.symbol }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                Timeframe
+
+            </label>
+
+            <strong>
+
+                {{ s.timeframe }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                Trend
+
+            </label>
+
+            <strong>
+
+                {{ s.trend }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                Signal
+
+            </label>
+
+            <strong
+                [ngClass]="{
+                    buy: s.signal === 'BUY',
+                    sell: s.signal === 'SELL',
+                    hold: s.signal === 'HOLD'
+                }">
+
+                {{ s.signal }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                Confidence
+
+            </label>
+
+            <strong>
+
+                {{ s.confidence }}%
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                Tradable
+
+            </label>
+
+            <strong>
+
+                {{ s.tradable ? 'YES' : 'NO' }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                Entry
+
+            </label>
+
+            <strong>
+
+                {{ s.entry | number:'1.2-2' }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                Stop Loss
+
+            </label>
+
+            <strong>
+
+                {{ s.stop_loss | number:'1.2-2' }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                Target
+
+            </label>
+
+            <strong>
+
+                {{ s.target | number:'1.2-2' }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                Risk Reward
+
+            </label>
+
+            <strong>
+
+                {{ s.risk_reward }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                EMA20
+
+            </label>
+
+            <strong>
+
+                {{ s.ema20 | number:'1.2-2' }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                EMA50
+
+            </label>
+
+            <strong>
+
+                {{ s.ema50 | number:'1.2-2' }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                RSI
+
+            </label>
+
+            <strong>
+
+                {{ s.rsi14 | number:'1.2-2' }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                ATR
+
+            </label>
+
+            <strong>
+
+                {{ s.atr14 | number:'1.2-2' }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                VWAP
+
+            </label>
+
+            <strong>
+
+                {{ s.vwap | number:'1.2-2' }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                MACD
+
+            </label>
+
+            <strong>
+
+                {{ s.macd | number:'1.2-2' }}
+
+            </strong>
+
+        </div>
+
+    </div>
+
+</app-section-card>
+
+<app-section-card title="Reasons">
+
+    <ul>
+
+        @for (reason of s.reasons; track reason) {
+
+        <li>
+
+            {{ reason }}
+
+        </li>
+
+        }
+
+    </ul>
+
+</app-section-card>
+
+<app-section-card title="Actions">
+
+    <div class="actions">
+
+        <button
+            mat-flat-button
+            color="primary">
+
+            Paper Trade
+
+        </button>
+
+        <button
+            mat-flat-button
+            color="accent">
+
+            Live Trade
+
+        </button>
+
+    </div>
+
+</app-section-card>
+
+}

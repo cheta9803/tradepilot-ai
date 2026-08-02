@@ -1,0 +1,120 @@
+:host {
+
+    display: block;
+
+}
+
+.toolbar {
+
+    display: flex;
+
+    gap: 16px;
+
+    align-items: center;
+
+    flex-wrap: wrap;
+
+}
+
+.symbol-field {
+
+    width: 300px;
+
+}
+
+.loading {
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    padding: 40px;
+
+    font-size: 16px;
+
+}
+
+.grid {
+
+    display: grid;
+
+    grid-template-columns: repeat(
+        auto-fit,
+        minmax(180px, 1fr)
+    );
+
+    gap: 20px;
+
+}
+
+.grid div {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 4px;
+
+}
+
+.grid label {
+
+    font-size: 12px;
+
+    color: #757575;
+
+    text-transform: uppercase;
+
+}
+
+.grid strong {
+
+    font-size: 18px;
+
+    font-weight: 600;
+
+}
+
+.buy {
+
+    color: #2e7d32;
+
+}
+
+.sell {
+
+    color: #d32f2f;
+
+}
+
+.hold {
+
+    color: #ed6c02;
+
+}
+
+ul {
+
+    margin: 0;
+
+    padding-left: 20px;
+
+}
+
+li {
+
+    margin-bottom: 10px;
+
+}
+
+.actions {
+
+    display: flex;
+
+    gap: 16px;
+
+    flex-wrap: wrap;
+
+}

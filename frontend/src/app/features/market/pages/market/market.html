@@ -1,1 +1,226 @@
 <p>market works!</p>
+<app-page-header title="Market" subtitle="Search instruments and analyze market data." />
+
+<app-section-card title="Instrument Search">
+
+    <mat-form-field appearance="outline" class="search-field">
+
+        <mat-label>
+
+            Search Symbol
+
+        </mat-label>
+
+        <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" (input)="searchInstrument()"
+            [matAutocomplete]="auto" placeholder="RELIANCE / TCS / INFY" />
+
+        <mat-autocomplete #auto="matAutocomplete">
+
+            @for (
+            instrument of instruments();
+            track instrument.token
+            ) {
+
+            <mat-option [value]="instrument.symbol" (onSelectionChange)="
+                        $event.isUserInput &&
+                        selectInstrument(instrument)
+                    ">
+
+                <strong>
+
+                    {{ instrument.symbol }}
+
+                </strong>
+
+                -
+
+                {{ instrument.trading_symbol }}
+
+            </mat-option>
+
+            }
+
+        </mat-autocomplete>
+
+    </mat-form-field>
+
+</app-section-card>
+
+@if (selected()) {
+
+<app-section-card title="Live Market">
+
+    <div class="summary">
+
+        <div>
+
+            <label>
+
+                Symbol
+
+            </label>
+
+            <strong>
+
+                {{ selected()!.symbol }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                Exchange
+
+            </label>
+
+            <strong>
+
+                {{ selected()!.exchange }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                LTP
+
+            </label>
+
+            <strong>
+
+                {{
+                livePrice()?.ltp
+                | number:'1.2-2'
+                }}
+
+            </strong>
+
+        </div>
+
+        <div>
+
+            <label>
+
+                Change %
+
+            </label>
+
+            <strong>
+
+                {{ changePercent() | number:'1.2-2' }}%
+
+            </strong>
+
+        </div>
+
+    </div>
+
+    <button mat-flat-button color="primary" (click)="addToWatchlist()">
+
+        Add To Watchlist
+
+    </button>
+
+    <button mat-flat-button color="primary" (click)="openStrategy()">
+
+        View AI Strategy
+
+    </button>
+
+</app-section-card>
+
+<app-section-card title="Recent Candles">
+
+    @if (loading()) {
+
+    <p>
+
+        Loading...
+
+    </p>
+
+    }
+
+    @else {
+
+    <table class="market-table">
+
+        <thead>
+
+            <tr>
+
+                <th>Time</th>
+                <th>Open</th>
+                <th>High</th>
+                <th>Low</th>
+                <th>Close</th>
+                <th>Volume</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @for (
+            candle of candles();
+            track candle.timestamp
+            ) {
+
+            <tr>
+
+                <td>
+
+                    {{ candle.timestamp }}
+
+                </td>
+
+                <td>
+
+                    {{ candle.open }}
+
+                </td>
+
+                <td>
+
+                    {{ candle.high }}
+
+                </td>
+
+                <td>
+
+                    {{ candle.low }}
+
+                </td>
+
+                <td>
+
+                    {{ candle.close }}
+
+                </td>
+
+                <td>
+
+                    {{ candle.volume }}
+
+                </td>
+
+            </tr>
+
+            }
+
+        </tbody>
+
+    </table>
+
+    }
+
+</app-section-card>
+
+}

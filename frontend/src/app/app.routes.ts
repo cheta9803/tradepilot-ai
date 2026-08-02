@@ -79,6 +79,18 @@ export const routes: Routes = [
             },
 
             {
+                path: 'strategy',
+
+                loadComponent: () =>
+                    import(
+                        './features/strategy/pages/strategy/strategy'
+                    ).then(
+                        m => m.Strategy,
+                    ),
+
+            },
+
+            {
                 path: 'watchlist',
 
                 loadComponent: () =>
