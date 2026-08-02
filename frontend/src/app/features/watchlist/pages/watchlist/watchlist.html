@@ -42,7 +42,7 @@
 
         </mat-form-field>
 
-        <button mat-flat-button color="primary" (click)="add()">
+        <button mat-flat-button color="primary" (click)="add()" [disabled]="store.adding()">
 
             Add Symbol
 
@@ -169,7 +169,7 @@
 
             <td mat-cell *matCellDef="let row">
 
-                {{ row.volume | number }}
+                {{ row.volume | compactNumber }}
 
             </td>
 
@@ -184,7 +184,8 @@
 
             <td mat-cell *matCellDef="let row">
 
-                <button mat-icon-button color="warn" (click)="delete(row.id)">
+                <button mat-icon-button color="warn" (click)="delete(row.id)"
+                    [disabled]="store.deletingId() === row.id">
 
                     <mat-icon>
 

@@ -42,6 +42,10 @@ import { SectionCard } from '../../../../shared/ui/section-card/section-card';
 
 import { WatchlistStore } from '../../state/watchlist.store';
 
+import {
+    CompactNumberPipe,
+} from '../../../../shared/pipes/compact-number.pipe';
+
 @Component({
   selector: 'app-watchlist',
   standalone: true,
@@ -56,6 +60,7 @@ import { WatchlistStore } from '../../state/watchlist.store';
     MatInputModule,
     MatSelectModule,
     DecimalPipe,
+    CompactNumberPipe
   ],
   templateUrl: './watchlist.html',
   styleUrl: './watchlist.scss',

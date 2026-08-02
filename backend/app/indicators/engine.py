@@ -41,12 +41,14 @@ class IndicatorEngine:
         )
 
         if len(candles) < required:
+
             print(
                 f"Skipping indicators for "
                 f"{symbol} {timeframe}. "
                 f"Need {required} candles, "
                 f"have {len(candles)}."
             )
+
             return None
 
         ema20 = EMACalculator.calculate(
@@ -74,9 +76,22 @@ class IndicatorEngine:
             cls.ATR_PERIOD,
         )
 
-        vwap = VWAPCalculator.calculate(
-            candles,
-        )
+        try:
+
+            vwap = VWAPCalculator.calculate(
+                candles,
+            )
+
+        except Exception as exc:
+
+            print(
+                f"VWAP failed "
+                f"{symbol} "
+                f"{timeframe}: "
+                f"{exc}"
+            )
+
+            vwap = None
 
         macd = MACDCalculator.calculate(
             candles,
@@ -88,6 +103,7 @@ class IndicatorEngine:
         )
 
         if instrument is None:
+
             raise ValueError(
                 f"Instrument not found: {symbol}"
             )
