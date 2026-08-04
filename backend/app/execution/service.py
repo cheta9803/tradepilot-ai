@@ -30,8 +30,7 @@ class ExecutionService:
             state = trade["state"]
 
             #
-            # Do not activate new trades
-            # after market hours.
+            # New trade execution
             #
             if (
                 state == "ENTRY_READY"
@@ -43,6 +42,9 @@ class ExecutionService:
                     ltp,
                 )
 
+            #
+            # Active trade management
+            #
             elif state in (
                 "BUY_ACTIVE",
                 "SELL_ACTIVE",
@@ -58,6 +60,10 @@ class ExecutionService:
                     ltp=ltp,
                 )
 
+                #
+                # Risk engine may have modified
+                # stoploss/trailing state.
+                #
                 trade = TradeLifecycle.get(
                     exchange=trade["exchange"],
                     token=trade["token"],
@@ -85,13 +91,15 @@ class ExecutionService:
         if trade["signal"] == "BUY":
 
             pnl = (
-                ltp - trade["entry_price"]
+                ltp
+                - trade["entry_price"]
             ) * trade["quantity"]
 
         else:
 
             pnl = (
-                trade["entry_price"] - ltp
+                trade["entry_price"]
+                - ltp
             ) * trade["quantity"]
 
         TradeLifecycle.update(
@@ -117,6 +125,15 @@ class ExecutionService:
         ltp: float,
     ) -> None:
 
+        #
+        # Never retry failed live orders.
+        #
+        if (
+            trade.get("execution_mode") == "LIVE"
+            and trade.get("order_status") == "FAILED"
+        ):
+            return
+
         signal = trade["signal"]
 
         activate = False
@@ -136,23 +153,23 @@ class ExecutionService:
         if not activate:
             return
 
-        if not ExecutionOrderService.execute_entry(
+        success = ExecutionOrderService.execute_entry(
             trade
-        ):
-            return
-
-        TradeLifecycle.update(
-            exchange=trade["exchange"],
-            token=trade["token"],
-            timeframe=trade["timeframe"],
-            values={
-                "state": (
-                    "BUY_ACTIVE"
-                    if signal == "BUY"
-                    else "SELL_ACTIVE"
-                ),
-            },
         )
+
+        if not success:
+
+            TradeLifecycle.update(
+                exchange=trade["exchange"],
+                token=trade["token"],
+                timeframe=trade["timeframe"],
+                values={
+                    "state": "ENTRY_FAILED",
+                    "reason": "BROKER_ORDER_FAILED",
+                },
+            )
+
+            return
 
         print(
             f"Trade Activated "
@@ -194,9 +211,9 @@ class ExecutionService:
             return
 
         pnl = (
-            (ltp - trade["entry_price"])
-            * trade["quantity"]
-        )
+            ltp
+            - trade["entry_price"]
+        ) * trade["quantity"]
 
         if signal == "SELL":
             pnl *= -1
@@ -207,14 +224,17 @@ class ExecutionService:
             timeframe=trade["timeframe"],
             values={
                 "state": "EXIT",
-                "exit_price": ltp,
-                "reason": exit_reason,
-                "pnl": round(
-                    pnl,
+                "exit_price": round(
+                    ltp,
                     2,
                 ),
                 "current_price": round(
                     ltp,
+                    2,
+                ),
+                "reason": exit_reason,
+                "pnl": round(
+                    pnl,
                     2,
                 ),
             },

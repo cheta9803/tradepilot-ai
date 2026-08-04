@@ -34,7 +34,11 @@ class TradeService:
         return [
             trade
             for trade in cls.get_all()
-            if trade["state"] != "EXIT"
+            if trade["state"] in (
+                "ENTRY_READY",
+                "BUY_ACTIVE",
+                "SELL_ACTIVE",
+            )
         ]
 
     @classmethod

@@ -1,64 +1,39 @@
-from datetime import datetime
+"""
+Legacy Execution Engine.
 
-from app.execution.capital import CapitalManager
-from app.trades.lifecycle import TradeLifecycle
-from app.trades.service import TradeService
+This class previously activated trades immediately after the
+strategy generated an ENTRY_READY signal.
+
+TradePilot AI now uses the following execution flow:
+
+StrategyEngine
+        ↓
+TradeLifecycle.create()
+        ↓
+ENTRY_READY
+        ↓
+ExecutionManager
+        ↓
+ExecutionService
+        ↓
+ExecutionOrderService
+        ↓
+Broker
+        ↓
+BUY_ACTIVE / SELL_ACTIVE / ENTRY_FAILED
+
+This class is intentionally kept as a no-op for backward
+compatibility. Do not add execution logic here.
+"""
 
 
 class ExecutionEngine:
 
     @classmethod
     def process(cls) -> None:
+        """
+        Execution is handled asynchronously by ExecutionManager.
 
-        trades = TradeService.get_all()
-
-        for trade in trades:
-
-            if trade["state"] != "ENTRY_READY":
-                continue
-
-            invested = (
-                trade["entry_price"]
-                * trade["quantity"]
-            )
-
-            if not CapitalManager.has_capital(
-                invested,
-            ):
-                continue
-
-            if trade["signal"] == "BUY":
-
-                TradeLifecycle.update(
-                    exchange=trade["exchange"],
-                    token=trade["token"],
-                    timeframe=trade["timeframe"],
-                    values={
-                        "state": "BUY_ACTIVE",
-                        "opened_at": datetime.now().isoformat(),
-                    },
-                )
-
-                print(
-                    f"BUY EXECUTED "
-                    f"{trade['symbol']} "
-                    f"{trade['timeframe']}"
-                )
-
-            elif trade["signal"] == "SELL":
-
-                TradeLifecycle.update(
-                    exchange=trade["exchange"],
-                    token=trade["token"],
-                    timeframe=trade["timeframe"],
-                    values={
-                        "state": "SELL_ACTIVE",
-                        "opened_at": datetime.now().isoformat(),
-                    },
-                )
-
-                print(
-                    f"SELL EXECUTED "
-                    f"{trade['symbol']} "
-                    f"{trade['timeframe']}"
-                )
+        Intentionally left blank.
+        """
+        return

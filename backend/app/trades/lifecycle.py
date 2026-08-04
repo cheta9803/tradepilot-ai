@@ -4,6 +4,7 @@ import json
 from app.db.redis import redis_client
 from app.trades.cache import TradeCache
 from app.trades.models import Trade
+from app.core.market_session import MarketSession
 
 
 class TradeLifecycle:
@@ -31,51 +32,36 @@ class TradeLifecycle:
             timeframe=timeframe,
         )
 
-        if existing:
+        #
+        # Never create LIVE trades outside market hours.
+        #
+        if (
+            execution_mode == "LIVE"
+            and not MarketSession.can_enter_trade()
+        ):
+            return
+
+        #
+        # Existing active trade.
+        #
+        if existing is not None:
 
             if existing["state"] in (
+                "ENTRY_READY",
                 "BUY_ACTIVE",
                 "SELL_ACTIVE",
             ):
                 return
 
-            if existing["state"] in (
-                "WAIT",
-                "ENTRY_READY",
-            ):
-
-                existing.update(
-                    {
-                        "signal": signal,
-                        "state": state,
-                        "entry_price": entry,
-                        "stop_loss": stop_loss,
-                        "target": target,
-                        "quantity": quantity,
-
-                        # -------------------------
-                        # Reset Risk State
-                        # -------------------------
-                        "highest_price": entry,
-                        "lowest_price": entry,
-                        "trail_started": False,
-                        "breakeven_done": False,
-
-                        "updated_at": datetime.now().isoformat(),
-                        "execution_mode": execution_mode,
-                    }
-                )
-
-                redis_client.set(
-                    TradeCache._key(
-                        exchange,
-                        token,
-                        timeframe,
-                    ),
-                    json.dumps(existing),
-                )
-
-                return
+            #
+            # Old trade finished.
+            # Remove it completely.
+            #
+            TradeCache.delete(
+                exchange=exchange,
+                token=token,
+                timeframe=timeframe,
+            )
 
         trade = Trade(
             exchange=exchange,
@@ -90,16 +76,18 @@ class TradeLifecycle:
             quantity=quantity,
             execution_mode=execution_mode,
 
-            # -------------------------
+            #
             # Risk State
-            # -------------------------
+            #
             highest_price=entry,
             lowest_price=entry,
             trail_started=False,
             breakeven_done=False,
         )
 
-        TradeCache.save(trade=trade)
+        TradeCache.save(
+            trade=trade,
+        )
 
     @classmethod
     def update(
@@ -128,19 +116,38 @@ class TradeLifecycle:
 
         now = datetime.now().isoformat()
 
+        #
+        # Entry activated
+        #
         if (
             previous_state == "ENTRY_READY"
             and current_state in (
                 "BUY_ACTIVE",
                 "SELL_ACTIVE",
             )
-            and trade["opened_at"] is None
+            and trade.get("opened_at") is None
         ):
             trade["opened_at"] = now
 
+        #
+        # Trade completed
+        #
         if (
             current_state == "EXIT"
-            and trade["closed_at"] is None
+            and trade.get("closed_at") is None
+        ):
+            trade["closed_at"] = now
+
+        #
+        # Failed / cancelled / rejected
+        #
+        if (
+            current_state in (
+                "ENTRY_FAILED",
+                "REJECTED",
+                "CANCELLED",
+            )
+            and trade.get("closed_at") is None
         ):
             trade["closed_at"] = now
 
@@ -165,6 +172,21 @@ class TradeLifecycle:
     ) -> dict | None:
 
         return TradeCache.get(
+            exchange=exchange,
+            token=token,
+            timeframe=timeframe,
+        )
+
+    @classmethod
+    def delete(
+        cls,
+        *,
+        exchange: str,
+        token: str,
+        timeframe: str,
+    ) -> None:
+
+        TradeCache.delete(
             exchange=exchange,
             token=token,
             timeframe=timeframe,

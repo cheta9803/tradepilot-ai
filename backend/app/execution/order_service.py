@@ -33,18 +33,58 @@ class ExecutionOrderService:
 
         order = OrderService.place_order(request)
 
+        status = order.status.value.upper()
+
+        values = {
+            "order_id": order.order_id,
+            "order_status": status,
+            "broker": "ANGELONE",
+        }
+
+        #
+        # Market order filled immediately.
+        #
+        if status == "COMPLETE":
+
+            values["state"] = (
+                "BUY_ACTIVE"
+                if trade["signal"] == "BUY"
+                else "SELL_ACTIVE"
+            )
+
+            TradeLifecycle.update(
+                exchange=trade["exchange"],
+                token=trade["token"],
+                timeframe=trade["timeframe"],
+                values=values,
+            )
+
+            return True
+
+        #
+        # Waiting for exchange.
+        #
+        if status == "PENDING":
+
+            TradeLifecycle.update(
+                exchange=trade["exchange"],
+                token=trade["token"],
+                timeframe=trade["timeframe"],
+                values=values,
+            )
+
+            return True
+
+        #
+        # Broker rejected immediately.
+        #
+        values["state"] = "ENTRY_FAILED"
+
         TradeLifecycle.update(
             exchange=trade["exchange"],
             token=trade["token"],
             timeframe=trade["timeframe"],
-            values={
-                "order_id": order.order_id,
-                "order_status": order.status.value,
-                "broker": "ANGELONE",
-            },
+            values=values,
         )
 
-        return order.status.value in (
-            "COMPLETE",
-            "PENDING",
-        )
+        return False

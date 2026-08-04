@@ -5,21 +5,16 @@ from app.trades.cache import TradeCache
 class MaxOpenTradesPolicy:
     """
     Checks whether the maximum number of
-    simultaneously active trades has been reached.
+    active positions has been reached.
     """
 
     ACTIVE_STATES = {
         "BUY_ACTIVE",
         "SELL_ACTIVE",
-        "ENTRY_READY",
     }
 
     @classmethod
     def reached(cls) -> bool:
-        """
-        Returns True when the configured maximum
-        number of active trades has been reached.
-        """
 
         trades = TradeCache.get_all()
 
@@ -29,4 +24,7 @@ class MaxOpenTradesPolicy:
             if trade.get("state") in cls.ACTIVE_STATES
         )
 
-        return active_trades >= settings.max_open_trades
+        return (
+            active_trades
+            >= settings.max_open_trades
+        )

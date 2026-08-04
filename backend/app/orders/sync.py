@@ -52,26 +52,57 @@ class OrderSyncService:
         order: dict,
     ) -> None:
 
+        status = order["status"].upper()
+
         values = {
-            "order_status": order["status"],
+            "order_status": status,
             "updated_at": datetime.now().isoformat(),
         }
 
-        if order.get("average_price") is not None:
-            values["entry_price"] = order["average_price"]
+        average_price = order.get("average_price")
 
-        status = order["status"].upper()
+        if average_price is not None:
+            values["entry_price"] = average_price
+            values["current_price"] = average_price
 
-        if status == "REJECTED":
+        #
+        # Order completely executed.
+        #
+        if status == "COMPLETE":
+
+            values["state"] = (
+                "BUY_ACTIVE"
+                if trade["signal"] == "BUY"
+                else "SELL_ACTIVE"
+            )
+
+        #
+        # Still waiting at exchange.
+        #
+        elif status in (
+            "PENDING",
+            "OPEN",
+            "TRIGGER PENDING",
+        ):
+
+            values["state"] = "ENTRY_READY"
+
+        #
+        # Broker rejected order.
+        #
+        elif status == "REJECTED":
 
             values.update(
                 {
-                    "state": "REJECTED",
+                    "state": "ENTRY_FAILED",
                     "reason": "Broker Rejected",
                     "closed_at": datetime.now().isoformat(),
                 }
             )
 
+        #
+        # Broker cancelled order.
+        #
         elif status == "CANCELLED":
 
             values.update(
@@ -113,7 +144,10 @@ class OrderSyncService:
 
             orders_data = response.get("data") or []
 
-            if not isinstance(orders_data, list):
+            if not isinstance(
+                orders_data,
+                list,
+            ):
                 logger.warning(
                     "Unexpected order book payload: %s",
                     response,
@@ -129,7 +163,9 @@ class OrderSyncService:
                 if not order_id:
                     continue
 
-                average_price = order.get("averageprice")
+                average_price = order.get(
+                    "averageprice"
+                )
 
                 try:
                     average_price = (
@@ -137,7 +173,10 @@ class OrderSyncService:
                         if average_price
                         else None
                     )
-                except (TypeError, ValueError):
+                except (
+                    TypeError,
+                    ValueError,
+                ):
                     average_price = None
 
                 orders[order_id] = {
