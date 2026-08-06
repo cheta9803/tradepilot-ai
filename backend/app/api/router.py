@@ -18,6 +18,7 @@ from app.trades.api import router as trades_router
 from app.watchlist.api import router as watchlist_router
 
 from app.dashboard.api import router as dashboard_router
+from app.ai.api import router as ai_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -57,3 +58,7 @@ api_router.include_router(account_router)
 
 # Orders APIs (v1.6.3)
 api_router.include_router(orders_router)
+
+api_router.include_router(
+    ai_router
+)
