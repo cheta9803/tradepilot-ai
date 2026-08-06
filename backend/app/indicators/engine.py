@@ -155,4 +155,13 @@ class IndicatorEngine:
             timeframe=timeframe,
         )
 
-        return values
+        #
+        # Import here to avoid circular imports.
+        #
+        from app.ai.engine import AIEngine
+
+        AIEngine.calculate(
+            exchange=instrument.exchange,
+            token=instrument.token,
+            timeframe=timeframe,
+        )
