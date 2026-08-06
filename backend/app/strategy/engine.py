@@ -13,6 +13,7 @@ from app.strategy.state import TradeState
 from app.strategy.trend import TrendService
 from app.trades.cache import TradeCache
 from app.trades.lifecycle import TradeLifecycle
+from app.patterns.cache import PatternCache
 
 
 class StrategyEngine:
@@ -191,6 +192,62 @@ class StrategyEngine:
                 "reasons": reasons,
             },
         )
+
+        patterns = PatternCache.get(
+            exchange=exchange,
+            token=token,
+            timeframe=timeframe,
+        )
+
+        if patterns:
+
+            if patterns["bullish_engulfing"]:
+
+                confidence += 5
+
+                reasons.append(
+                    "Bullish Engulfing"
+                )
+
+            if patterns["bearish_engulfing"]:
+
+                confidence -= 5
+
+                reasons.append(
+                    "Bearish Engulfing"
+                )
+
+            if patterns["hammer"]:
+
+                confidence += 3
+
+                reasons.append(
+                    "Hammer Pattern"
+                )
+
+            if patterns["shooting_star"]:
+
+                confidence -= 3
+
+                reasons.append(
+                    "Shooting Star"
+                )
+
+            if patterns["breakout"]:
+
+                confidence += 5
+
+                reasons.append(
+                    "Breakout"
+                )
+
+            if patterns["breakdown"]:
+
+                confidence -= 5
+
+                reasons.append(
+                    "Breakdown"
+                )
 
         #
         # No entry signal.

@@ -10,6 +10,7 @@ from app.indicators.calculators.supertrend import (
 from app.indicators.calculators.vwap import VWAPCalculator
 from app.indicators.repository import IndicatorRepository
 from app.instruments.cache import InstrumentCache
+from app.patterns.engine import PatternEngine
 
 
 class IndicatorEngine:
@@ -138,6 +139,12 @@ class IndicatorEngine:
             token=instrument.token,
             timeframe=timeframe,
             values=values,
+        )
+
+        PatternEngine.calculate(
+            exchange=instrument.exchange,
+            token=instrument.token,
+            timeframe=timeframe,
         )
 
         from app.strategy.engine import StrategyEngine
