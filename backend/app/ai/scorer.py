@@ -8,174 +8,122 @@ class AIScorer:
         cls,
         *,
         strategy: dict,
-        patterns: dict,
-    ) -> AIScore:
+        patterns: dict | None,
+    ) -> dict:
 
-        score = 50
-
+        score = 0
         reasons = []
 
         #
         # Trend
         #
         if strategy["trend"] == "UPTREND":
-
-            score += 10
-
-            reasons.append(
-                "Uptrend"
-            )
-
-        elif strategy["trend"] == "DOWNTREND":
-
-            score -= 10
-
-            reasons.append(
-                "Downtrend"
-            )
+            score += 20
+            reasons.append("Uptrend")
+        else:
+            reasons.append("Downtrend")
 
         #
         # EMA
         #
         if strategy["entry"] > strategy["ema20"]:
-
-            score += 10
-
-            reasons.append(
-                "Above EMA20"
-            )
+            score += 15
+            reasons.append("Above EMA20")
 
         #
         # RSI
         #
-        if strategy["rsi14"] >= 60:
+        rsi = strategy["rsi14"]
 
-            score += 10
+        if 55 <= rsi <= 70:
+            score += 15
+            reasons.append("Strong RSI")
 
-            reasons.append(
-                "Strong RSI"
-            )
-
-        elif strategy["rsi14"] <= 40:
-
-            score -= 10
-
-            reasons.append(
-                "Weak RSI"
-            )
+        elif 45 <= rsi < 55:
+            score += 5
+            reasons.append("Neutral RSI")
 
         #
         # MACD
         #
         if strategy["macd"] > strategy["signal_line"]:
+            score += 15
+            reasons.append("MACD Bullish")
 
-            score += 10
+        #
+        # VWAP
+        #
+        vwap = strategy.get("vwap")
 
-            reasons.append(
-                "MACD Bullish"
-            )
+        if vwap is not None:
 
-        else:
-
-            score -= 10
-
-            reasons.append(
-                "MACD Bearish"
-            )
+            if strategy["entry"] > vwap:
+                score += 15
+                reasons.append("Above VWAP")
 
         #
         # Supertrend
         #
         if strategy["supertrend_signal"] == "BUY":
-
-            score += 10
-
-            reasons.append(
-                "Supertrend BUY"
-            )
-
+            score += 15
+            reasons.append("Supertrend BUY")
         else:
-
             score -= 10
-
-            reasons.append(
-                "Supertrend SELL"
-            )
+            reasons.append("Supertrend SELL")
 
         #
         # Candlestick Patterns
         #
         if patterns:
 
-            if patterns["bullish_engulfing"]:
-
+            if patterns.get("bullish_engulfing"):
                 score += 10
+                reasons.append("Bullish Engulfing")
 
-                reasons.append(
-                    "Bullish Engulfing"
-                )
+            if patterns.get("morning_star"):
+                score += 10
+                reasons.append("Morning Star")
 
-            if patterns["bearish_engulfing"]:
+            if patterns.get("hammer"):
+                score += 8
+                reasons.append("Hammer")
 
+            if patterns.get("breakout"):
+                score += 10
+                reasons.append("Resistance Breakout")
+
+            if patterns.get("bearish_engulfing"):
+                score -= 15
+
+            if patterns.get("evening_star"):
+                score -= 15
+
+            if patterns.get("shooting_star"):
                 score -= 10
 
-                reasons.append(
-                    "Bearish Engulfing"
-                )
+            if patterns.get("breakdown"):
+                score -= 15
 
-            if patterns["hammer"]:
+        #
+        # Clamp score
+        #
+        score = max(0, min(score, 100))
 
-                score += 5
-
-                reasons.append(
-                    "Hammer"
-                )
-
-            if patterns["shooting_star"]:
-
-                score -= 5
-
-                reasons.append(
-                    "Shooting Star"
-                )
-
-            if patterns["breakout"]:
-
-                score += 10
-
-                reasons.append(
-                    "Breakout"
-                )
-
-            if patterns["breakdown"]:
-
-                score -= 10
-
-                reasons.append(
-                    "Breakdown"
-                )
-
-        score = max(
-            0,
-            min(
-                score,
-                100,
-            ),
-        )
-
-        recommendation = "HOLD"
-
-        if score >= 75:
-
+        #
+        # Recommendation
+        #
+        if score >= 80:
             recommendation = "BUY"
 
-        elif score <= 25:
+        elif score >= 60:
+            recommendation = "WATCH"
 
-            recommendation = "SELL"
+        else:
+            recommendation = "HOLD"
 
-        return AIScore(
-            score=score,
-            reasons=reasons,
-            recommendation=recommendation,
-            confidence=score,
-        )
+        return {
+            "score": score,
+            "confidence": score,
+            "recommendation": recommendation,
+            "reasons": reasons,
+        }

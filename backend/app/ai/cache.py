@@ -35,7 +35,10 @@ class AICache:
         score: AIScore,
     ) -> None:
 
-        values = asdict(score)
+        if isinstance(score, dict):
+            values = score
+        else:
+            values = asdict(score)
 
         values["updated_at"] = (
             datetime.now().isoformat()
