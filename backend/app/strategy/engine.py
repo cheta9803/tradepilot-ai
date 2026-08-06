@@ -68,6 +68,43 @@ class StrategyEngine:
         )
 
         #
+        # Supertrend confirmation
+        #
+        supertrend_signal = indicators.get(
+            "supertrend_signal",
+        )
+
+        if (
+            signal == StrategyRules.BUY
+            and supertrend_signal == "SELL"
+        ):
+
+            signal = StrategyRules.HOLD
+            confidence = max(
+                confidence - 20,
+                50,
+            )
+
+            reasons.append(
+                "Supertrend is SELL"
+            )
+
+        elif (
+            signal == StrategyRules.SELL
+            and supertrend_signal == "BUY"
+        ):
+
+            signal = StrategyRules.HOLD
+            confidence = max(
+                confidence - 20,
+                50,
+            )
+
+            reasons.append(
+                "Supertrend is BUY"
+            )
+
+        #
         # Trend Filter
         #
         if (
@@ -144,6 +181,10 @@ class StrategyEngine:
                 "vwap": indicators["vwap"],
                 "macd": indicators["macd"],
                 "signal_line": indicators["signal"],
+                "supertrend": indicators["supertrend"],
+                "supertrend_signal": indicators[
+                    "supertrend_signal"
+                ],
                 "quantity": position["quantity"],
                 "invested": position["invested"],
                 "risk_amount": position["risk_amount"],

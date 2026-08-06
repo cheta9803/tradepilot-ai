@@ -61,14 +61,57 @@ class StrategyService:
             signal=indicators["signal"],
         )
 
-        if trend == TrendService.UPTREND and signal == StrategyRules.SELL:
+        #
+        # Supertrend confirmation
+        #
+        supertrend_signal = indicators.get(
+            "supertrend_signal",
+        )
+
+        if (
+            signal == StrategyRules.BUY
+            and supertrend_signal == "SELL"
+        ):
+
+            signal = StrategyRules.HOLD
+            confidence = max(
+                confidence - 20,
+                50,
+            )
+
+            reasons.append(
+                "Supertrend is SELL"
+            )
+
+        elif (
+            signal == StrategyRules.SELL
+            and supertrend_signal == "BUY"
+        ):
+
+            signal = StrategyRules.HOLD
+            confidence = max(
+                confidence - 20,
+                50,
+            )
+
+            reasons.append(
+                "Supertrend is BUY"
+            )
+
+        if (
+            trend == TrendService.UPTREND
+            and signal == StrategyRules.SELL
+        ):
             signal = StrategyRules.HOLD
             confidence = 50
             reasons.append(
                 "SELL ignored because overall trend is UPTREND"
             )
 
-        elif trend == TrendService.DOWNTREND and signal == StrategyRules.BUY:
+        elif (
+            trend == TrendService.DOWNTREND
+            and signal == StrategyRules.BUY
+        ):
             signal = StrategyRules.HOLD
             confidence = 50
             reasons.append(
@@ -103,6 +146,10 @@ class StrategyService:
             "vwap": indicators["vwap"],
             "macd": indicators["macd"],
             "signal_line": indicators["signal"],
+            "supertrend": indicators["supertrend"],
+            "supertrend_signal": indicators[
+                "supertrend_signal"
+            ],
             "reasons": reasons,
         }
 

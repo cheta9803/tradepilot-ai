@@ -4,6 +4,9 @@ from app.indicators.calculators.ema import EMACalculator
 from app.indicators.calculators.macd import MACDCalculator
 from app.indicators.calculators.rsi import RSICalculator
 from app.indicators.calculators.sma import SMACalculator
+from app.indicators.calculators.supertrend import (
+    SupertrendCalculator,
+)
 from app.indicators.calculators.vwap import VWAPCalculator
 from app.indicators.repository import IndicatorRepository
 from app.instruments.cache import InstrumentCache
@@ -16,6 +19,9 @@ class IndicatorEngine:
     SMA_PERIOD = 20
     RSI_PERIOD = 14
     ATR_PERIOD = 14
+
+    SUPER_TREND_PERIOD = 10
+    SUPER_TREND_MULTIPLIER = 3.0
 
     @classmethod
     def calculate(
@@ -97,6 +103,14 @@ class IndicatorEngine:
             candles,
         )
 
+        supertrend = (
+            SupertrendCalculator.calculate(
+                candles,
+                period=cls.SUPER_TREND_PERIOD,
+                multiplier=cls.SUPER_TREND_MULTIPLIER,
+            )
+        )
+
         instrument = InstrumentCache.get_by_symbol(
             exchange="NSE",
             symbol=symbol,
@@ -116,6 +130,7 @@ class IndicatorEngine:
             "atr14": atr14,
             "vwap": vwap,
             **macd,
+            **supertrend,
         }
 
         IndicatorCache.save(

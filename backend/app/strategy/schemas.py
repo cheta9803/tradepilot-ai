@@ -41,4 +41,8 @@ class StrategyResponse(BaseModel):
 
     signal_line: float
 
+    supertrend: float
+
+    supertrend_signal: str
+
     reasons: list[str]
