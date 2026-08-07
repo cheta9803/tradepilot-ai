@@ -89,7 +89,7 @@ class WebSocketManager:
 
         for index, connection in enumerate(list(self.connections)):
 
-            logger.info(
+            logger.debug(
                 "Connection %d state=%s",
                 index,
                 connection.client_state,
@@ -109,7 +109,7 @@ class WebSocketManager:
                     message,
                 )
 
-                logger.info(
+                logger.debug(
                     "Successfully sent to connection %d",
                     index,
                 )

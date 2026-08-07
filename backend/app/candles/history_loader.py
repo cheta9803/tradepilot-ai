@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.candles.history_cache import HistoryCache
+from app.history.redis_cache import HistoryCache
 from app.candles.repository import CandleRepository
 
 

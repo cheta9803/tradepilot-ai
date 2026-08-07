@@ -83,7 +83,7 @@ class HistoryCache:
                 candles.append(candle)
 
         else:
-            candles.append(candle)
+            candles = [candle]
 
         candles = candles[-cls.MAX_CANDLES :]
 
@@ -116,7 +116,7 @@ class HistoryCache:
 
         data = json.loads(value)
 
-        candles = []
+        candles: list[Candle] = []
 
         for item in data:
 
@@ -155,3 +155,23 @@ class HistoryCache:
                 timeframe,
             )
         )
+
+    @classmethod
+    def get_latest_timestamp(
+        cls,
+        *,
+        exchange: str,
+        token: str,
+        timeframe: str,
+    ) -> datetime | None:
+
+        candles = cls.get(
+            exchange=exchange,
+            token=token,
+            timeframe=timeframe,
+        )
+
+        if not candles:
+            return None
+
+        return candles[-1].timestamp

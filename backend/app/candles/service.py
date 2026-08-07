@@ -54,8 +54,6 @@ class CandleService:
             minute=minute,
         ):
 
-            HistoryCache.append(candle)
-
             TimeframeAggregator.process(
                 candle,
             )
@@ -192,6 +190,11 @@ class CandleService:
     ) -> None:
 
         CandleCache.save(candle)
+
+        #
+        # Keep history cache synchronized with live candle.
+        #
+        HistoryCache.append(candle)
 
         db = SessionLocal()
 

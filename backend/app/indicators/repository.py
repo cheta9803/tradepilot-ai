@@ -1,4 +1,4 @@
-from app.candles.history_cache import HistoryCache
+from app.history.redis_cache import HistoryCache
 from app.candles.models import Candle
 from app.instruments.cache import InstrumentCache
 

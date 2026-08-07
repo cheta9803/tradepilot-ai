@@ -6,7 +6,11 @@ from app.history.loader import HistoryLoader
 
 class HistoryLoadQueue:
 
-    DELAY_SECONDS = 0.5
+    DELAY_SECONDS = 4.0
+
+    MAX_RETRIES = 3
+
+    RETRY_DELAY_SECONDS = 5.0
 
     @classmethod
     def load(
@@ -16,19 +20,55 @@ class HistoryLoadQueue:
 
         for exchange, token in instruments:
 
-            try:
+            for attempt in range(1, cls.MAX_RETRIES + 1):
 
-                HistoryLoader.load(
-                    exchange=exchange,
-                    token=token,
-                )
+                try:
 
-            except Exception:
+                    HistoryLoader.load(
+                        exchange=exchange,
+                        token=token,
+                    )
 
-                logger.exception(
-                    "Failed to load history for %s:%s",
-                    exchange,
-                    token,
-                )
+                    break
+
+                except ValueError as ex:
+
+                    #
+                    # Angel One rate limit
+                    #
+                    if "Too many requests" in str(ex):
+
+                        logger.warning(
+                            "Rate limit for %s:%s (attempt %d/%d). Retrying in %.1f sec.",
+                            exchange,
+                            token,
+                            attempt,
+                            cls.MAX_RETRIES,
+                            cls.RETRY_DELAY_SECONDS,
+                        )
+
+                        if attempt < cls.MAX_RETRIES:
+
+                            sleep(cls.RETRY_DELAY_SECONDS)
+
+                            continue
+
+                    logger.exception(
+                        "Failed to load history for %s:%s",
+                        exchange,
+                        token,
+                    )
+
+                    break
+
+                except Exception:
+
+                    logger.exception(
+                        "Failed to load history for %s:%s",
+                        exchange,
+                        token,
+                    )
+
+                    break
 
             sleep(cls.DELAY_SECONDS)

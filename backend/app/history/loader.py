@@ -25,10 +25,36 @@ class HistoryLoader:
         if instrument is None:
             return
 
-        history = HistoryService.get_last_day(
+        latest = HistoryCache.get_latest_timestamp(
             exchange=exchange,
             token=token,
+            timeframe=HistoryLoader.TIMEFRAME,
         )
+
+        print(
+            f"{instrument.symbol}: latest cached candle = {latest}"
+        )
+
+        if latest is None:
+
+            history = HistoryService.get_last_day(
+                exchange=exchange,
+                token=token,
+            )
+
+        else:
+
+            history = HistoryService.get_since(
+                exchange=exchange,
+                token=token,
+                from_date=latest,
+            )
+
+            #
+            # Ignore duplicate last candle returned by API
+            #
+            if history:
+                history = history[1:]
 
         if not history:
             return
@@ -59,14 +85,33 @@ class HistoryLoader:
 
             candles.append(candle)
 
-        HistoryCache.save(
-            exchange=exchange,
-            token=token,
-            timeframe=HistoryLoader.TIMEFRAME,
-            candles=candles,
-        )
+        if latest is None:
 
-        print(
-            f"Loaded {len(candles)} candles for "
-            f"{instrument.symbol}"
-        )
+            HistoryCache.save(
+                exchange=exchange,
+                token=token,
+                timeframe=HistoryLoader.TIMEFRAME,
+                candles=candles,
+            )
+
+        else:
+
+            for candle in candles:
+
+                HistoryCache.append(
+                    candle,
+                )
+
+        if latest is None:
+
+            print(
+                f"Loaded {len(candles)} historical candles for "
+                f"{instrument.symbol}"
+            )
+
+        else:
+
+            print(
+                f"Synced {len(candles)} new candles for "
+                f"{instrument.symbol}"
+            )
