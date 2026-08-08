@@ -15,6 +15,7 @@ class LiveManager:
     def __init__(self):
 
         self.client = LiveClient()
+
         self.subscribed_tokens: set[str] = set()
 
     def _attach_callbacks(self) -> None:
@@ -34,17 +35,30 @@ class LiveManager:
         )
 
         try:
+
             self.client.initialize()
+
         except Exception as exc:
-            logger.warning("Live client initialization failed: %s", exc)
+
+            logger.warning(
+                "Live client initialization failed: %s",
+                exc,
+            )
+
             return
 
         self._attach_callbacks()
 
         try:
+
             self.client.connect()
+
         except Exception as exc:
-            logger.warning("Live client connection failed: %s", exc)
+
+            logger.warning(
+                "Live client connection failed: %s",
+                exc,
+            )
 
     def stop(self):
 
@@ -59,6 +73,14 @@ class LiveManager:
         exchange: str,
         token: str,
     ):
+
+        if self.client.client is None:
+
+            logger.warning(
+                "Cannot subscribe: Live WebSocket client is not initialized.",
+            )
+
+            return
 
         if token in self.subscribed_tokens:
 
@@ -109,6 +131,10 @@ class LiveManager:
         exchange: str,
         token: str,
     ):
+
+        if self.client.client is None:
+
+            return
 
         if token not in self.subscribed_tokens:
 
@@ -184,7 +210,7 @@ class LiveManager:
         error,
     ):
 
-        logger.exception(
+        logger.error(
             "Live WebSocket Error: %s",
             error,
         )
@@ -197,19 +223,46 @@ class LiveManager:
 
         try:
 
-            logger.debug(
-                "Tick received: %s",
+            if not isinstance(
                 message,
+                dict,
+            ):
+
+                logger.debug(
+                    "Ignoring non-dict WebSocket message: %r",
+                    message,
+                )
+
+                return
+
+            token = message.get(
+                "token",
             )
 
-            token = str(
-                message.get(
-                    "token",
-                ),
+            if token is None:
+
+                logger.debug(
+                    "Ignoring WebSocket message without token: %s",
+                    message,
+                )
+
+                return
+
+            raw_ltp = message.get(
+                "last_traded_price",
             )
+
+            if raw_ltp is None:
+
+                logger.debug(
+                    "Ignoring WebSocket message without LTP: %s",
+                    message,
+                )
+
+                return
 
             instrument = InstrumentCache.get_by_token(
-                token,
+                str(token),
             )
 
             if instrument is None:
@@ -227,7 +280,7 @@ class LiveManager:
             )
 
             LiveCache.save(
-                token,
+                str(token),
                 data,
             )
 
@@ -237,7 +290,9 @@ class LiveManager:
 
             broadcast_data = {
                 **data,
-                "timestamp": data["timestamp"].isoformat(),
+                "timestamp": data[
+                    "timestamp"
+                ].isoformat(),
             }
 
             websocket_manager.broadcast_threadsafe(
@@ -263,6 +318,13 @@ class LiveManager:
                     token=instrument.token,
                     timeframe=timeframe,
                 )
+
+        except ValueError as exc:
+
+            logger.warning(
+                "Ignoring invalid live tick: %s",
+                exc,
+            )
 
         except Exception:
 

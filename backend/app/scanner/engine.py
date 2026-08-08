@@ -8,7 +8,6 @@ from app.scanner.reason_builder import ReasonBuilder
 from app.scanner.score_engine import ScoreEngine
 
 
-
 class ScannerEngine:
 
     BUY = "BUY"

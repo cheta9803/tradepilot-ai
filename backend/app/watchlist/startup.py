@@ -4,6 +4,7 @@ from app.db.session import SessionLocal
 from app.history.load_queue import HistoryLoadQueue
 from app.instruments.cache import InstrumentCache
 from app.watchlist.models import Watchlist
+from app.scanner.universe import Nifty50Universe
 
 
 class WatchlistStartup:
@@ -69,6 +70,24 @@ class WatchlistStartup:
                 collect(
                     item.exchange,
                     item.symbol,
+                )
+
+            #
+            # Nifty 50 universe
+            #
+            for instrument in InstrumentCache.get_all():
+
+                if instrument.exchange != "NSE":
+                    continue
+
+                if not Nifty50Universe.contains(
+                    instrument.symbol,
+                ):
+                    continue
+
+                collect(
+                    instrument.exchange,
+                    instrument.symbol,
                 )
 
             #

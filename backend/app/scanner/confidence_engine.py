@@ -17,69 +17,41 @@ class ConfidenceEngine:
 
         confidence = score
 
-        #
-        # Multi-timeframe agreement
-        #
+        signals = (
+            timeframes.one_minute,
+            timeframes.five_minutes,
+            timeframes.fifteen_minutes,
+            timeframes.one_hour,
+        )
+
         bullish = sum(
             1
-            for signal in timeframes.values()
+            for signal in signals
             if signal == "BUY"
         )
 
         if bullish >= 3:
-
             confidence += 10
 
         elif bullish == 2:
-
             confidence += 5
 
-        #
-        # Trend strength
-        #
-        trend_strength = indicators.get(
-            "trend_strength",
-            0,
-        )
-
-        if trend_strength >= 80:
-
+        if indicators.trend_strength >= 80:
             confidence += 10
 
-        elif trend_strength >= 60:
-
+        elif indicators.trend_strength >= 60:
             confidence += 5
 
-        #
-        # Volume quality
-        #
-        if indicators.get(
-            "volume_spike",
+        if indicators.volume_spike:
+            confidence += 5
+
+        if (
+            indicators.market_trend != "UNKNOWN"
+            and indicators.market_trend == indicators.trend
         ):
-
             confidence += 5
 
-        #
-        # Market confirmation
-        #
-        if indicators.get(
-            "market_trend",
-        ) == indicators.get(
-            "trend",
-        ):
-
-            confidence += 5
-
-        #
-        # Risk Reward
-        #
-        risk_reward = indicators.get(
-            "risk_reward",
-            0,
-        )
-
-        if risk_reward >= 2:
-
+        if indicators.risk_reward >= 2:
             confidence += 5
 
         return min(

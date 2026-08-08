@@ -19,6 +19,7 @@ from app.watchlist.api import router as watchlist_router
 
 from app.dashboard.api import router as dashboard_router
 from app.ai.api import router as ai_router
+from app.scanner.api import router as scanner_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -61,4 +62,8 @@ api_router.include_router(orders_router)
 
 api_router.include_router(
     ai_router
+)
+
+api_router.include_router(
+    scanner_router,
 )

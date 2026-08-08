@@ -26,6 +26,12 @@ class CandleService:
         timestamp: datetime,
     ) -> None:
 
+        if price <= 0:
+            return
+
+        if volume < 0:
+            volume = 0
+
         minute = timestamp.replace(
             second=0,
             microsecond=0,
@@ -47,6 +53,10 @@ class CandleService:
                 volume=volume,
             )
 
+            return
+
+        # Ignore delayed/out-of-order ticks.
+        if minute < candle.timestamp:
             return
 
         if CandleService._is_new_minute(
@@ -117,6 +127,7 @@ class CandleService:
             )
 
         finally:
+
             db.close()
 
         if entity is None:
@@ -135,7 +146,9 @@ class CandleService:
             volume=entity.volume,
         )
 
-        CandleCache.save(candle)
+        CandleCache.save(
+            candle,
+        )
 
         return candle
 
@@ -160,7 +173,9 @@ class CandleService:
             volume=volume,
         )
 
-        CandleService._persist(candle)
+        CandleService._persist(
+            candle,
+        )
 
     @staticmethod
     def _update_existing_candle(
@@ -172,29 +187,32 @@ class CandleService:
 
         if (
             candle.close == price
-            and candle.volume == volume
+            and volume == 0
         ):
             return
 
-        candle = CandleBuilder.update(
+        CandleBuilder.update(
             candle,
             price=price,
             volume=volume,
         )
 
-        CandleService._persist(candle)
+        CandleService._persist(
+            candle,
+        )
 
     @staticmethod
     def _persist(
         candle: Candle,
     ) -> None:
 
-        CandleCache.save(candle)
+        CandleCache.save(
+            candle,
+        )
 
-        #
-        # Keep history cache synchronized with live candle.
-        #
-        HistoryCache.append(candle)
+        HistoryCache.append(
+            candle,
+        )
 
         db = SessionLocal()
 

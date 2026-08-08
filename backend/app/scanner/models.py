@@ -73,3 +73,11 @@ class ScannerResult:
     updated_at: datetime = field(
         default_factory=datetime.now,
     )
+
+    market_status: str = "CLOSED"
+
+    data_status: str = "STALE"
+
+    data_age_seconds: float = 0.0
+
+    recommendations_available: bool = False
