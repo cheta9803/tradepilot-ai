@@ -1,0 +1,57 @@
+<div class="market-status" [class.closed]="
+        status().marketStatus === 'CLOSED'
+    " [class.open]="
+        status().marketStatus === 'OPEN'
+    " [class.unknown]="
+        status().marketStatus === 'UNKNOWN'
+    ">
+
+    <div class="status-main">
+
+        <div class="status-indicator"></div>
+
+        <div class="status-content">
+
+            <div class="status-label">
+                {{ status().marketLabel }}
+            </div>
+
+            <div class="status-message">
+                {{ status().message }}
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="status-meta">
+
+        <span class="data-badge" [class.live]="
+                status().dataStatus === 'LIVE'
+            " [class.stale]="
+                status().dataStatus === 'STALE'
+            ">
+            {{ status().dataLabel }}
+        </span>
+
+        @if (status().ageSeconds !== null) {
+
+        <span class="age">
+            {{ formatAge(status().ageSeconds) }}
+        </span>
+
+        }
+
+        <span class="recommendation-status" [class.available]="
+                status().recommendationsAvailable
+            ">
+            {{
+            status().recommendationsAvailable
+            ? 'Recommendations available'
+            : 'Recommendations unavailable'
+            }}
+        </span>
+
+    </div>
+
+</div>

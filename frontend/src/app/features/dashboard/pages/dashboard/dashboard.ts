@@ -8,32 +8,46 @@ import {
 import { DashboardService } from '../../services/dashboard.service';
 
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
+
 import { SummaryCards } from '../../components/summary-cards/summary-cards';
-import { MarketIndices } from '../../components/market-indices/market-indices';
-import { OpenPositions } from '../../components/open-positions/open-positions';
-import { RecentOrders } from '../../components/recent-orders/recent-orders';
-import { Watchlist } from '../../components/watchlist/watchlist';
+
+import { MarketStatus } from '../../components/market-status/market-status';
+
 import { TopOpportunities } from '../../components/top-opportunities/top-opportunities';
 
+import { MarketIndices } from '../../components/market-indices/market-indices';
+
+import { OpenPositions } from '../../components/open-positions/open-positions';
+
+import { RecentOrders } from '../../components/recent-orders/recent-orders';
+
+import { Watchlist } from '../../components/watchlist/watchlist';
 
 @Component({
   selector: 'app-dashboard',
+
   imports: [
     PageHeader,
     SummaryCards,
+    MarketStatus,
     TopOpportunities,
     MarketIndices,
     OpenPositions,
     RecentOrders,
     Watchlist,
   ],
+
   templateUrl: './dashboard.html',
+
   styleUrl: './dashboard.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
+
+  changeDetection:
+    ChangeDetectionStrategy.OnPush,
 })
 export class Dashboard implements OnInit {
 
-  private readonly dashboardService = inject(DashboardService);
+  private readonly dashboardService =
+    inject(DashboardService);
 
   constructor() {
 
@@ -44,7 +58,9 @@ export class Dashboard implements OnInit {
   }
 
   ngOnInit(): void {
+
     this.dashboardService.load();
+
   }
 
 }
