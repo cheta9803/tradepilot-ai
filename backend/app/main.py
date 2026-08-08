@@ -30,29 +30,61 @@ async def lifespan(
         asyncio.get_running_loop(),
     )
 
-    InstrumentCache.load()
+    try:
+        InstrumentCache.load()
+    except Exception as exc:
+        logger.warning("Instrument cache initialization failed: %s", exc)
 
     db = SessionLocal()
 
     try:
+        try:
+            CandleHistoryLoader.load(
+                db,
+            )
+        except Exception as exc:
+            logger.warning("Candle history initialization failed: %s", exc)
 
-        CandleHistoryLoader.load(
-            db,
-        )
+        try:
+            HistoryRebuilder.rebuild()
+        except Exception as exc:
+            logger.warning("History rebuild failed: %s", exc)
 
     finally:
-
         db.close()
 
-    HistoryRebuilder.rebuild()
+    try:
+        AngelClient.login()
+        logger.info("Angel client initialized successfully.")
+    except Exception as exc:
+        logger.warning(
+            "Angel client initialization failed during startup: %s",
+            exc,
+        )
 
-    AngelClient.login()
+    try:
+        StartupRecovery.recover()
+    except Exception as exc:
+        logger.warning(
+            "Startup recovery failed: %s",
+            exc,
+        )
 
-    StartupRecovery.recover()
+    try:
+        execution_manager.start()
+    except Exception as exc:
+        logger.warning(
+            "Execution manager failed to start: %s",
+            exc,
+        )
 
-    execution_manager.start()
-
-    live_manager.start()
+    try:
+        live_manager.start()
+    except Exception as exc:
+        logger.warning(
+            "Live manager failed to start: %s",
+            exc,
+        )
 
     logger.info(
         "TradePilot AI started",
@@ -60,9 +92,21 @@ async def lifespan(
 
     yield
 
-    execution_manager.stop()
+    try:
+        execution_manager.stop()
+    except Exception as exc:
+        logger.warning(
+            "Execution manager shutdown failed: %s",
+            exc,
+        )
 
-    live_manager.stop()
+    try:
+        live_manager.stop()
+    except Exception as exc:
+        logger.warning(
+            "Live manager shutdown failed: %s",
+            exc,
+        )
 
     logger.info(
         "TradePilot AI stopped",

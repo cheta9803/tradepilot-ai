@@ -18,16 +18,17 @@ class AIScorer:
         # Trend
         #
         if strategy["trend"] == "UPTREND":
-            score += 20
+            score += 12
             reasons.append("Uptrend")
         else:
+            score -= 8
             reasons.append("Downtrend")
 
         #
         # EMA
         #
         if strategy["entry"] > strategy["ema20"]:
-            score += 15
+            score += 10
             reasons.append("Above EMA20")
 
         #
@@ -36,18 +37,18 @@ class AIScorer:
         rsi = strategy["rsi14"]
 
         if 55 <= rsi <= 70:
-            score += 15
+            score += 12
             reasons.append("Strong RSI")
 
         elif 45 <= rsi < 55:
-            score += 5
+            score += 3
             reasons.append("Neutral RSI")
 
         #
         # MACD
         #
         if strategy["macd"] > strategy["signal_line"]:
-            score += 15
+            score += 10
             reasons.append("MACD Bullish")
 
         #
@@ -58,18 +59,21 @@ class AIScorer:
         if vwap is not None:
 
             if strategy["entry"] > vwap:
-                score += 15
+                score += 8
                 reasons.append("Above VWAP")
 
         #
         # Supertrend
         #
         if strategy["supertrend_signal"] == "BUY":
-            score += 15
+            score += 14
             reasons.append("Supertrend BUY")
-        else:
-            score -= 10
+        elif strategy["supertrend_signal"] == "SELL":
+            score -= 6
             reasons.append("Supertrend SELL")
+        else:
+            score -= 2
+            reasons.append("Supertrend Neutral")
 
         #
         # Candlestick Patterns
@@ -112,14 +116,17 @@ class AIScorer:
         #
         # Recommendation
         #
-        if score >= 80:
+        if score >= 55:
             recommendation = "BUY"
 
-        elif score >= 60:
+        elif score >= 25:
             recommendation = "WATCH"
 
-        else:
+        elif score >= 10:
             recommendation = "HOLD"
+
+        else:
+            recommendation = "NO SIGNAL"
 
         return {
             "score": score,

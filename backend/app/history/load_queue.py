@@ -53,20 +53,22 @@ class HistoryLoadQueue:
 
                             continue
 
-                    logger.exception(
-                        "Failed to load history for %s:%s",
+                    logger.debug(
+                        "Failed to load history for %s:%s: %s",
                         exchange,
                         token,
+                        ex,
                     )
 
                     break
 
-                except Exception:
+                except Exception as exc:
 
-                    logger.exception(
-                        "Failed to load history for %s:%s",
+                    logger.debug(
+                        "Failed to load history for %s:%s: %s",
                         exchange,
                         token,
+                        exc,
                     )
 
                     break

@@ -15,8 +15,10 @@ FORMAT = (
     "%(message)s"
 )
 
+log_level = getattr(settings, "log_level", "INFO")
+
 logging.basicConfig(
-    level=getattr(logging, settings.log_level.upper()),
+    level=getattr(logging, str(log_level).upper(), logging.INFO),
     format=FORMAT,
     handlers=[
         logging.StreamHandler(sys.stdout),

@@ -17,6 +17,18 @@ class LiveClient:
 
     def __init__(self):
 
+        self.smart_api = None
+        self.feed_token = None
+        self.client = None
+
+        self.state = ConnectionState.DISCONNECTED
+        self._thread: threading.Thread | None = None
+
+    def initialize(self):
+
+        if self.client is not None:
+            return
+
         self.smart_api = AngelClient.get_client()
 
         self.feed_token = self.smart_api.getfeedToken()
@@ -27,10 +39,6 @@ class LiveClient:
             client_code=settings.angel_client_id,
             feed_token=self.feed_token,
         )
-
-        self.state = ConnectionState.DISCONNECTED
-
-        self._thread: threading.Thread | None = None
 
     def connect(self):
 
@@ -57,15 +65,14 @@ class LiveClient:
             self.state = ConnectionState.DISCONNECTED
 
     def mark_connected(self):
-
         self.state = ConnectionState.CONNECTED
 
     def mark_disconnected(self):
-
         self.state = ConnectionState.DISCONNECTED
 
     def close(self):
 
         self.mark_disconnected()
 
-        self.client.close_connection()
+        if self.client is not None:
+            self.client.close_connection()

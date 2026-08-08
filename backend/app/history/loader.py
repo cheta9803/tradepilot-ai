@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from app.candles.builder import CandleBuilder
-from app.candles.redis_cache import CandleCache
+from app.core.logger import logger
 from app.history.redis_cache import HistoryCache
 from app.history.service import HistoryService
 from app.instruments.cache import InstrumentCache
@@ -31,8 +31,10 @@ class HistoryLoader:
             timeframe=HistoryLoader.TIMEFRAME,
         )
 
-        print(
-            f"{instrument.symbol}: latest cached candle = {latest}"
+        logger.debug(
+            "%s: latest cached candle = %s",
+            instrument.symbol,
+            latest,
         )
 
         if latest is None:
@@ -104,14 +106,16 @@ class HistoryLoader:
 
         if latest is None:
 
-            print(
-                f"Loaded {len(candles)} historical candles for "
-                f"{instrument.symbol}"
+            logger.info(
+                "Loaded %d historical candles for %s",
+                len(candles),
+                instrument.symbol,
             )
 
         else:
 
-            print(
-                f"Synced {len(candles)} new candles for "
-                f"{instrument.symbol}"
+            logger.info(
+                "Synced %d new candles for %s",
+                len(candles),
+                instrument.symbol,
             )

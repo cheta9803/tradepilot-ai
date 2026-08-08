@@ -72,7 +72,11 @@ class AngelClient:
 
     @classmethod
     def get_client(cls) -> SmartConnect:
-        return cls.login()
+
+        if cls._client is None:
+            return cls.login()
+
+        return cls._client
 
     @classmethod
     def is_logged_in(cls) -> bool:

@@ -75,10 +75,15 @@ class WebSocketManager:
         if self.loop is None:
             return
 
-        asyncio.run_coroutine_threadsafe(
-            self.broadcast(message),
-            self.loop,
-        )
+        try:
+            asyncio.run_coroutine_threadsafe(
+                self.broadcast(message),
+                self.loop,
+            )
+        except RuntimeError:
+            logger.warning(
+                "Unable to broadcast message because the event loop is not available.",
+            )
 
     async def broadcast(
         self,

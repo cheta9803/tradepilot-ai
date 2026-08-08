@@ -15,13 +15,17 @@ class LiveManager:
     def __init__(self):
 
         self.client = LiveClient()
+        self.subscribed_tokens: set[str] = set()
+
+    def _attach_callbacks(self) -> None:
+
+        if self.client.client is None:
+            return
 
         self.client.client.on_open = self.on_open
         self.client.client.on_data = self.on_data
         self.client.client.on_error = self.on_error
         self.client.client.on_close = self.on_close
-
-        self.subscribed_tokens: set[str] = set()
 
     def start(self):
 
@@ -29,7 +33,18 @@ class LiveManager:
             "Starting Live WebSocket...",
         )
 
-        self.client.connect()
+        try:
+            self.client.initialize()
+        except Exception as exc:
+            logger.warning("Live client initialization failed: %s", exc)
+            return
+
+        self._attach_callbacks()
+
+        try:
+            self.client.connect()
+        except Exception as exc:
+            logger.warning("Live client connection failed: %s", exc)
 
     def stop(self):
 
