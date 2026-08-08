@@ -53,9 +53,9 @@ class PortfolioService:
                     0.0,
                 )
 
-        available = (
-            settings.default_capital
-            - invested
+        available = max(
+            settings.default_capital - invested,
+            0.0,
         )
 
         total_pnl = (

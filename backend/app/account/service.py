@@ -22,9 +22,9 @@ class AccountService:
 
         used_margin = portfolio.invested
 
-        available_margin = (
-            equity
-            - used_margin
+        available_margin = max(
+            equity - used_margin,
+            0.0,
         )
 
         return Account(
