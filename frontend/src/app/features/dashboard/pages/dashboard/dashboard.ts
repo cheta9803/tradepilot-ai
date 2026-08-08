@@ -15,6 +15,8 @@ import { MarketStatus } from '../../components/market-status/market-status';
 
 import { TopOpportunities } from '../../components/top-opportunities/top-opportunities';
 
+import { AiOpportunities } from '../../components/ai-opportunities/ai-opportunities';
+
 import { MarketIndices } from '../../components/market-indices/market-indices';
 
 import { OpenPositions } from '../../components/open-positions/open-positions';
@@ -31,6 +33,7 @@ import { Watchlist } from '../../components/watchlist/watchlist';
     SummaryCards,
     MarketStatus,
     TopOpportunities,
+    AiOpportunities,
     MarketIndices,
     OpenPositions,
     RecentOrders,
