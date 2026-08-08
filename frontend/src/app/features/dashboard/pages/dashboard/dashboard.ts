@@ -13,12 +13,15 @@ import { MarketIndices } from '../../components/market-indices/market-indices';
 import { OpenPositions } from '../../components/open-positions/open-positions';
 import { RecentOrders } from '../../components/recent-orders/recent-orders';
 import { Watchlist } from '../../components/watchlist/watchlist';
+import { TopOpportunities } from '../../components/top-opportunities/top-opportunities';
+
 
 @Component({
   selector: 'app-dashboard',
   imports: [
     PageHeader,
     SummaryCards,
+    TopOpportunities,
     MarketIndices,
     OpenPositions,
     RecentOrders,

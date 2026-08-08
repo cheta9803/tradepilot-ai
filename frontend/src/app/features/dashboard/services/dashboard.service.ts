@@ -9,10 +9,12 @@ import {
 import { MarketStore } from '../../../core/realtime/services/market.store';
 import { DashboardApi } from '../api/dashboard-api';
 import {
+    AiOpportunity,
     DashboardSummary,
     MarketIndex,
     Order,
     Position,
+    ScannerOpportunity,
 } from '../models/dashboard.model';
 
 @Injectable({
@@ -60,6 +62,20 @@ export class DashboardService {
         () => this._orders(),
     );
 
+    private readonly _scannerOpportunities =
+        signal<ScannerOpportunity[]>([]);
+
+    private readonly _aiOpportunities =
+        signal<AiOpportunity[]>([]);
+
+    readonly scannerOpportunities = computed(
+        () => this._scannerOpportunities(),
+    );
+
+    readonly aiOpportunities = computed(
+        () => this._aiOpportunities(),
+    );
+
     constructor() {
 
         console.log(
@@ -104,9 +120,58 @@ export class DashboardService {
                 error: error => {
 
                     console.error(
+                        'Dashboard API failed:',
                         error,
                     );
 
+                },
+
+            });
+
+        this.dashboardApi
+            .getTopScanner(5)
+            .subscribe({
+
+                next: opportunities => {
+
+                    this._scannerOpportunities.set(
+                        opportunities,
+                    );
+
+                },
+
+                error: error => {
+
+                    console.error(
+                        'Scanner API failed:',
+                        error,
+                    );
+
+                    this._scannerOpportunities.set([]);
+                },
+
+            });
+
+        this.dashboardApi
+            .getTopAi(5)
+            .subscribe({
+
+                next: opportunities => {
+
+                    this._aiOpportunities.set(
+                        opportunities,
+                    );
+
+                },
+
+                error: error => {
+
+                    console.error(
+                        'AI API failed:',
+                        error,
+                    );
+
+                    this._aiOpportunities.set([]);
                 },
 
             });

@@ -26,3 +26,74 @@ export interface Order {
   quantity: number;
   status: string;
 }
+
+/**
+ * Scanner result returned by /scanner/top.
+ *
+ * Keep optional fields here because the backend contract is still
+ * evolving and we don't want the UI to break when a field is absent.
+ */
+export interface ScannerOpportunity {
+  exchange?: string;
+  symbol: string;
+  token?: string | number;
+
+  score?: number;
+  confidence?: number;
+
+  recommendation?: string;
+  signal?: string;
+
+  reasons?: string[];
+
+  indicators?: Record<string, unknown>;
+  timeframes?: Record<string, unknown>;
+
+  updated_at?: string;
+  market_status?: string;
+  data_status?: string;
+  data_age_seconds?: number;
+
+  recommendations_available?: boolean;
+
+  entry?: number;
+  stop_loss?: number;
+  target?: number;
+  risk_reward?: number;
+}
+
+/**
+ * AI result returned by /ai/top.
+ *
+ * We intentionally keep the nested AI-specific structures flexible
+ * until the backend response contract is finalized.
+ */
+export interface AiOpportunity {
+  exchange?: string;
+  symbol: string;
+  token?: string | number;
+
+  score?: number;
+  confidence?: number;
+
+  recommendation?: string;
+  signal?: string;
+
+  reasons?: string[];
+
+  indicators?: Record<string, unknown>;
+  strategy?: Record<string, unknown>;
+  patterns?: Record<string, unknown>;
+
+  updated_at?: string;
+  market_status?: string;
+  data_status?: string;
+  data_age_seconds?: number;
+
+  recommendations_available?: boolean;
+
+  entry?: number;
+  stop_loss?: number;
+  target?: number;
+  risk_reward?: number;
+}

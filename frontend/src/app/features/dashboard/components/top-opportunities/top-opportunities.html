@@ -1,0 +1,101 @@
+<app-section-card title="Top Opportunities">
+
+    @if (dashboard.scannerOpportunities().length === 0) {
+
+    <div class="empty-state">
+        <div class="empty-title">
+            No scanner opportunities
+        </div>
+
+        <div class="empty-message">
+            Scanner recommendations are currently unavailable.
+        </div>
+    </div>
+
+    } @else {
+
+    <div class="opportunity-list">
+
+        @for (
+        opportunity of dashboard.scannerOpportunities();
+        track opportunity.symbol
+        ) {
+
+        <div class="opportunity">
+
+            <div class="symbol-section">
+
+                <div class="symbol">
+                    {{ opportunity.symbol }}
+                </div>
+
+                @if (opportunity.exchange) {
+                <div class="exchange">
+                    {{ opportunity.exchange }}
+                </div>
+                }
+
+            </div>
+
+            <div class="signal-section">
+
+                <span class="signal" [class.buy]="
+                opportunity.recommendation === 'BUY' ||
+                opportunity.signal === 'BUY'
+              " [class.sell]="
+                opportunity.recommendation === 'SELL' ||
+                opportunity.signal === 'SELL'
+              " [class.hold]="
+                opportunity.recommendation === 'HOLD' ||
+                opportunity.signal === 'HOLD'
+              ">
+                    {{
+                    opportunity.recommendation ||
+                    opportunity.signal ||
+                    'N/A'
+                    }}
+                </span>
+
+            </div>
+
+            <div class="score-section">
+
+                @if (opportunity.score !== undefined) {
+
+                <div class="score">
+                    {{ opportunity.score | number:'1.0-2' }}
+                </div>
+
+                <div class="score-label">
+                    Score
+                </div>
+
+                }
+
+            </div>
+
+            <div class="confidence-section">
+
+                @if (opportunity.confidence !== undefined) {
+
+                <div class="confidence">
+                    {{ opportunity.confidence }}%
+                </div>
+
+                <div class="confidence-label">
+                    Confidence
+                </div>
+
+                }
+
+            </div>
+
+        </div>
+
+        }
+
+    </div>
+
+    }
+
+</app-section-card>

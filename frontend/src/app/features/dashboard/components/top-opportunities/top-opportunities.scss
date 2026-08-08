@@ -1,0 +1,111 @@
+.opportunity-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.opportunity {
+    display: grid;
+    grid-template-columns:
+        minmax(120px, 1fr) minmax(90px, auto) minmax(70px, auto) minmax(90px, auto);
+
+    align-items: center;
+    gap: 1rem;
+
+    padding: 1rem 0;
+
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+    &:last-child {
+        border-bottom: 0;
+    }
+}
+
+.symbol {
+    font-weight: 600;
+}
+
+.exchange {
+    margin-top: 0.2rem;
+
+    font-size: 0.75rem;
+
+    opacity: 0.65;
+}
+
+.signal {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    min-width: 64px;
+
+    padding: 0.35rem 0.65rem;
+
+    border-radius: 999px;
+
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.signal.buy {
+    background: rgba(34, 197, 94, 0.12);
+    color: #16a34a;
+}
+
+.signal.sell {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+}
+
+.signal.hold {
+    background: rgba(234, 179, 8, 0.12);
+    color: #ca8a04;
+}
+
+.score,
+.confidence {
+    font-weight: 600;
+}
+
+.score-label,
+.confidence-label {
+    margin-top: 0.15rem;
+
+    font-size: 0.7rem;
+
+    opacity: 0.6;
+}
+
+.empty-state {
+    padding: 2rem 1rem;
+
+    text-align: center;
+}
+
+.empty-title {
+    font-weight: 600;
+}
+
+.empty-message {
+    margin-top: 0.4rem;
+
+    font-size: 0.85rem;
+
+    opacity: 0.65;
+}
+
+@media (max-width: 767px) {
+
+    .opportunity {
+        grid-template-columns: 1fr 1fr;
+
+        gap: 0.75rem;
+    }
+
+    .score-section,
+    .confidence-section {
+        text-align: right;
+    }
+
+}
