@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from app.angel.client import AngelClient
 from app.angel.exceptions import AngelAPIException
-from app.angel.service import AngelService
+from app.instruments.cache import InstrumentCache
 from app.market.models import Candle
 from app.market.provider import MarketProvider
 
@@ -18,12 +18,6 @@ class AngelMarketProvider(MarketProvider):
         "1d": "ONE_DAY",
     }
 
-    TOKEN_MAP = {
-        "RELIANCE": "2885",
-        "TCS": "11536",
-        "INFY": "1594",
-    }
-
     def get_history(
         self,
         symbol: str,
@@ -31,19 +25,28 @@ class AngelMarketProvider(MarketProvider):
         limit: int,
     ) -> list[Candle]:
 
-        smart_api = AngelClient.login()
+        symbol = symbol.upper()
+
+        instrument = InstrumentCache.get_by_symbol(
+            exchange="NSE",
+            symbol=symbol,
+        )
+
+        if instrument is None:
+            raise AngelAPIException(
+                f"Instrument not found: {symbol}"
+            )
 
         interval = self.INTERVAL_MAP.get(
             timeframe,
-            "FIVE_MINUTE",
         )
 
-        token = self.TOKEN_MAP.get(symbol)
-
-        if token is None:
+        if interval is None:
             raise AngelAPIException(
-                f"Unsupported symbol {symbol}"
+                f"Unsupported timeframe: {timeframe}"
             )
+
+        smart_api = AngelClient.login()
 
         to_date = datetime.now()
 
@@ -54,8 +57,8 @@ class AngelMarketProvider(MarketProvider):
 
         response = smart_api.getCandleData(
             {
-                "exchange": "NSE",
-                "symboltoken": token,
+                "exchange": instrument.exchange,
+                "symboltoken": instrument.token,
                 "interval": interval,
                 "fromdate": from_date.strftime(
                     "%Y-%m-%d %H:%M"
@@ -66,21 +69,30 @@ class AngelMarketProvider(MarketProvider):
             }
         )
 
-        if not response["status"]:
+        if not response.get("status"):
+
             raise AngelAPIException(
-                response["message"]
+                response.get(
+                    "message",
+                    "Unable to fetch historical data.",
+                )
             )
 
-        candles = []
+        rows = response.get(
+            "data",
+            [],
+        )
 
-        for row in response["data"][-limit:]:
+        candles: list[Candle] = []
+
+        for row in rows[-limit:]:
 
             candles.append(
                 Candle(
-                    symbol=symbol,
+                    symbol=instrument.symbol,
                     timeframe=timeframe,
                     timestamp=datetime.fromisoformat(
-                        row[0]
+                        row[0],
                     ),
                     open=float(row[1]),
                     high=float(row[2]),
@@ -98,6 +110,8 @@ class AngelMarketProvider(MarketProvider):
         symbol: str,
         token: str,
     ) -> dict:
+
+        from app.angel.service import AngelService
 
         return AngelService.get_ltp(
             exchange=exchange,
