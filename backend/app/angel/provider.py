@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.angel.client import AngelClient
 from app.angel.exceptions import AngelAPIException
+from app.angel.service import AngelService
 from app.market.models import Candle
 from app.market.provider import MarketProvider
 
@@ -44,24 +45,31 @@ class AngelMarketProvider(MarketProvider):
                 f"Unsupported symbol {symbol}"
             )
 
-        from datetime import timedelta
-
         to_date = datetime.now()
 
-        from_date = to_date - timedelta(days=5)
+        from_date = (
+            to_date -
+            timedelta(days=5)
+        )
 
         response = smart_api.getCandleData(
             {
                 "exchange": "NSE",
                 "symboltoken": token,
                 "interval": interval,
-                "fromdate": from_date.strftime("%Y-%m-%d %H:%M"),
-                "todate": to_date.strftime("%Y-%m-%d %H:%M"),
+                "fromdate": from_date.strftime(
+                    "%Y-%m-%d %H:%M"
+                ),
+                "todate": to_date.strftime(
+                    "%Y-%m-%d %H:%M"
+                ),
             }
         )
 
         if not response["status"]:
-            raise AngelAPIException(response["message"])
+            raise AngelAPIException(
+                response["message"]
+            )
 
         candles = []
 
@@ -71,7 +79,9 @@ class AngelMarketProvider(MarketProvider):
                 Candle(
                     symbol=symbol,
                     timeframe=timeframe,
-                    timestamp=datetime.fromisoformat(row[0]),
+                    timestamp=datetime.fromisoformat(
+                        row[0]
+                    ),
                     open=float(row[1]),
                     high=float(row[2]),
                     low=float(row[3]),
@@ -81,3 +91,16 @@ class AngelMarketProvider(MarketProvider):
             )
 
         return candles
+
+    def get_ltp(
+        self,
+        exchange: str,
+        symbol: str,
+        token: str,
+    ) -> dict:
+
+        return AngelService.get_ltp(
+            exchange=exchange,
+            symbol=symbol,
+            token=token,
+        )

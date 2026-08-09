@@ -1,226 +1,438 @@
-<p>market works!</p>
-<app-page-header title="Market" subtitle="Search instruments and analyze market data." />
+<app-page-header
+    title="Market"
+    subtitle="Search instruments and analyze market data."
+/>
 
 <app-section-card title="Instrument Search">
 
-    <mat-form-field appearance="outline" class="search-field">
+    <div class="search-container">
 
-        <mat-label>
+        <mat-form-field
+            appearance="outline"
+            class="search-field"
+        >
 
-            Search Symbol
+            <mat-label>
+                Search Symbol
+            </mat-label>
 
-        </mat-label>
+            <input
+                matInput
+                [ngModel]="search()"
+                (ngModelChange)="search.set($event)"
+                (input)="searchInstrument()"
+                [matAutocomplete]="auto"
+                placeholder="RELIANCE / TCS / INFY"
+            />
 
-        <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" (input)="searchInstrument()"
-            [matAutocomplete]="auto" placeholder="RELIANCE / TCS / INFY" />
+            <mat-autocomplete #auto="matAutocomplete">
 
-        <mat-autocomplete #auto="matAutocomplete">
+                @for (
+                    instrument of instruments();
+                    track instrument.token
+                ) {
 
-            @for (
-            instrument of instruments();
-            track instrument.token
-            ) {
+                    <mat-option
+                        [value]="instrument.symbol"
+                        (onSelectionChange)="
+                            $event.isUserInput &&
+                            selectInstrument(instrument)
+                        "
+                    >
 
-            <mat-option [value]="instrument.symbol" (onSelectionChange)="
-                        $event.isUserInput &&
-                        selectInstrument(instrument)
-                    ">
+                        <strong>
+                            {{ instrument.symbol }}
+                        </strong>
 
-                <strong>
+                        <span class="instrument-name">
+                            {{ instrument.trading_symbol }}
+                        </span>
 
-                    {{ instrument.symbol }}
+                    </mat-option>
 
-                </strong>
+                }
 
-                -
+            </mat-autocomplete>
 
-                {{ instrument.trading_symbol }}
-
-            </mat-option>
-
-            }
-
-        </mat-autocomplete>
-
-    </mat-form-field>
-
-</app-section-card>
-
-@if (selected()) {
-
-<app-section-card title="Live Market">
-
-    <div class="summary">
-
-        <div>
-
-            <label>
-
-                Symbol
-
-            </label>
-
-            <strong>
-
-                {{ selected()!.symbol }}
-
-            </strong>
-
-        </div>
-
-        <div>
-
-            <label>
-
-                Exchange
-
-            </label>
-
-            <strong>
-
-                {{ selected()!.exchange }}
-
-            </strong>
-
-        </div>
-
-        <div>
-
-            <label>
-
-                LTP
-
-            </label>
-
-            <strong>
-
-                {{
-                livePrice()?.ltp
-                | number:'1.2-2'
-                }}
-
-            </strong>
-
-        </div>
-
-        <div>
-
-            <label>
-
-                Change %
-
-            </label>
-
-            <strong>
-
-                {{ changePercent() | number:'1.2-2' }}%
-
-            </strong>
-
-        </div>
+        </mat-form-field>
 
     </div>
 
-    <button mat-flat-button color="primary" (click)="addToWatchlist()">
-
-        Add To Watchlist
-
-    </button>
-
-    <button mat-flat-button color="primary" (click)="openStrategy()">
-
-        View AI Strategy
-
-    </button>
-
 </app-section-card>
 
-<app-section-card title="Recent Candles">
 
-    @if (loading()) {
+@if (selected(); as instrument) {
 
-    <p>
+    <app-section-card title="Market Overview">
 
-        Loading...
+        <div class="market-header">
 
-    </p>
+            <div class="instrument-heading">
+
+                <div class="symbol">
+                    {{ instrument.symbol }}
+                </div>
+
+                <div class="instrument-meta">
+                    {{ instrument.exchange }}
+                    ·
+                    {{ instrument.trading_symbol }}
+                </div>
+
+            </div>
+
+            <div class="data-status">
+
+                <span
+                    class="status-dot"
+                    [class.live]="dataStatus() === 'LIVE'"
+                    [class.recent]="dataStatus() === 'RECENT'"
+                    [class.stale]="dataStatus() === 'STALE'"
+                ></span>
+
+                <span>
+                    {{ dataStatus() }}
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="price-section">
+
+            <div class="current-price">
+
+                @if (livePrice() != null) {
+
+                    {{ livePrice() | number:'1.2-2' }}
+
+                } @else {
+
+                    —
+
+                }
+
+            </div>
+
+            <div
+                class="price-change"
+                [class.positive]="change() > 0"
+                [class.negative]="change() < 0"
+            >
+
+                @if (change() > 0) {
+                    +
+                }
+
+                {{ change() | number:'1.2-2' }}
+
+                <span>
+                    (
+                    @if (changePercent() > 0) {
+                        +
+                    }
+                    {{ changePercent() | number:'1.2-2' }}%
+                    )
+                </span>
+
+            </div>
+
+            <div class="price-label">
+
+                Latest {{ selectedTimeframe() }} candle change
+
+            </div>
+
+        </div>
+
+
+        <div class="overview-grid">
+
+            <div class="metric">
+
+                <span class="metric-label">
+                    Open
+                </span>
+
+                <strong>
+                    {{ open() | number:'1.2-2' }}
+                </strong>
+
+            </div>
+
+            <div class="metric">
+
+                <span class="metric-label">
+                    High
+                </span>
+
+                <strong>
+                    {{ high() | number:'1.2-2' }}
+                </strong>
+
+            </div>
+
+            <div class="metric">
+
+                <span class="metric-label">
+                    Low
+                </span>
+
+                <strong>
+                    {{ low() | number:'1.2-2' }}
+                </strong>
+
+            </div>
+
+            <div class="metric">
+
+                <span class="metric-label">
+                    Close
+                </span>
+
+                <strong>
+                    {{ close() | number:'1.2-2' }}
+                </strong>
+
+            </div>
+
+            <div class="metric">
+
+                <span class="metric-label">
+                    Volume
+                </span>
+
+                <strong>
+                    {{ volume() | number:'1.0-0' }}
+                </strong>
+
+            </div>
+
+            <div class="metric">
+
+                <span class="metric-label">
+                    Last Candle
+                </span>
+
+                <strong>
+                    {{ lastUpdated() | date:'dd MMM, HH:mm' }}
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="actions">
+
+            <button
+                mat-flat-button
+                color="primary"
+                (click)="addToWatchlist()"
+            >
+                Add To Watchlist
+            </button>
+
+            <button
+                mat-stroked-button
+                color="primary"
+                (click)="openStrategy()"
+            >
+                View AI Strategy
+            </button>
+
+        </div>
+
+    </app-section-card>
+
+
+    <app-section-card title="Price Chart">
+
+        <div class="chart-toolbar">
+
+            <div class="timeframe-buttons">
+
+                @for (
+                    timeframe of timeframes;
+                    track timeframe
+                ) {
+
+                    <button
+                        mat-button
+                        [class.active]="
+                            selectedTimeframe() === timeframe
+                        "
+                        (click)="selectTimeframe(timeframe)"
+                    >
+                        {{ timeframe }}
+                    </button>
+
+                }
+
+            </div>
+
+            <div class="chart-info">
+
+                @if (dataAgeMinutes() != null) {
+
+                    Last data:
+                    {{ dataAgeMinutes() }} min ago
+
+                }
+
+            </div>
+
+        </div>
+
+
+        @if (loading()) {
+
+            <div class="loading">
+
+                Loading market data...
+
+            </div>
+
+        } @else if (chartPath()) {
+
+            <div class="chart-container">
+
+                <svg
+                    viewBox="0 0 900 280"
+                    preserveAspectRatio="none"
+                    class="price-chart"
+                >
+
+                    <path
+                        class="chart-line"
+                        [attr.d]="chartPath()"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        vector-effect="non-scaling-stroke"
+                    />
+
+                </svg>
+
+            </div>
+
+        } @else {
+
+            <div class="empty-state">
+
+                No historical market data available.
+
+            </div>
+
+        }
+
+    </app-section-card>
+
+
+    @if (
+        dataStatus() === 'STALE'
+    ) {
+
+        <div class="stale-banner">
+
+            <div class="stale-title">
+                Market data is stale
+            </div>
+
+            <div class="stale-message">
+
+                The market may currently be closed or the latest
+                broker data may not be available. The page is
+                showing the latest available candle.
+
+            </div>
+
+        </div>
 
     }
 
-    @else {
 
-    <table class="market-table">
+    <app-section-card title="Recent Candles">
 
-        <thead>
+        @if (loading()) {
 
-            <tr>
+            <div class="loading">
+                Loading candles...
+            </div>
 
-                <th>Time</th>
-                <th>Open</th>
-                <th>High</th>
-                <th>Low</th>
-                <th>Close</th>
-                <th>Volume</th>
+        } @else if (candles().length === 0) {
 
-            </tr>
+            <div class="empty-state">
+                No candle data available.
+            </div>
 
-        </thead>
+        } @else {
 
-        <tbody>
+            <div class="table-container">
 
-            @for (
-            candle of candles();
-            track candle.timestamp
-            ) {
+                <table class="market-table">
 
-            <tr>
+                    <thead>
 
-                <td>
+                        <tr>
 
-                    {{ candle.timestamp }}
+                            <th>Time</th>
+                            <th>Open</th>
+                            <th>High</th>
+                            <th>Low</th>
+                            <th>Close</th>
+                            <th>Volume</th>
 
-                </td>
+                        </tr>
 
-                <td>
+                    </thead>
 
-                    {{ candle.open }}
+                    <tbody>
 
-                </td>
+                        @for (
+                            candle of candles();
+                            track candle.timestamp
+                        ) {
 
-                <td>
+                            <tr>
 
-                    {{ candle.high }}
+                                <td>
+                                    {{ candle.timestamp | date:'dd MMM HH:mm' }}
+                                </td>
 
-                </td>
+                                <td>
+                                    {{ candle.open | number:'1.2-2' }}
+                                </td>
 
-                <td>
+                                <td>
+                                    {{ candle.high | number:'1.2-2' }}
+                                </td>
 
-                    {{ candle.low }}
+                                <td>
+                                    {{ candle.low | number:'1.2-2' }}
+                                </td>
 
-                </td>
+                                <td>
+                                    {{ candle.close | number:'1.2-2' }}
+                                </td>
 
-                <td>
+                                <td>
+                                    {{ candle.volume | number:'1.0-0' }}
+                                </td>
 
-                    {{ candle.close }}
+                            </tr>
 
-                </td>
+                        }
 
-                <td>
+                    </tbody>
 
-                    {{ candle.volume }}
+                </table>
 
-                </td>
+            </div>
 
-            </tr>
+        }
 
-            }
-
-        </tbody>
-
-    </table>
-
-    }
-
-</app-section-card>
+    </app-section-card>
 
 }

@@ -25,6 +25,18 @@ class MarketService:
             limit=limit,
         )
 
+    def get_ltp(
+        self,
+        exchange: str,
+        symbol: str,
+        token: str,
+    ):
+        return self.provider.get_ltp(
+            exchange=exchange,
+            symbol=symbol,
+            token=token,
+        )
+
     def update_tick(
         self,
         tick: dict,
