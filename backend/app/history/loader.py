@@ -16,6 +16,7 @@ class HistoryLoader:
         *,
         exchange: str,
         token: str,
+        refresh: bool = False,
     ) -> None:
 
         instrument = InstrumentCache.get_by_token(
@@ -25,11 +26,15 @@ class HistoryLoader:
         if instrument is None:
             return
 
-        latest = HistoryCache.get_latest_timestamp(
-            exchange=exchange,
-            token=token,
-            timeframe=HistoryLoader.TIMEFRAME,
-        )
+        latest = None
+
+        if not refresh:
+
+            latest = HistoryCache.get_latest_timestamp(
+                exchange=exchange,
+                token=token,
+                timeframe=HistoryLoader.TIMEFRAME,
+            )
 
         logger.debug(
             "%s: latest cached candle = %s",
@@ -37,7 +42,11 @@ class HistoryLoader:
             latest,
         )
 
-        if latest is None:
+        #
+        # When refreshing, deliberately fetch the latest
+        # completed trading-day history again.
+        #
+        if refresh or latest is None:
 
             history = HistoryService.get_last_day(
                 exchange=exchange,
@@ -53,7 +62,7 @@ class HistoryLoader:
             )
 
             #
-            # Ignore duplicate last candle returned by API
+            # Angel One may return the last cached candle again.
             #
             if history:
                 history = history[1:]
@@ -87,13 +96,22 @@ class HistoryLoader:
 
             candles.append(candle)
 
-        if latest is None:
+        #
+        # A refresh replaces the existing 1m cache.
+        #
+        if refresh or latest is None:
 
             HistoryCache.save(
                 exchange=exchange,
                 token=token,
                 timeframe=HistoryLoader.TIMEFRAME,
                 candles=candles,
+            )
+
+            logger.info(
+                "Refreshed %d historical candles for %s",
+                len(candles),
+                instrument.symbol,
             )
 
         else:
@@ -103,16 +121,6 @@ class HistoryLoader:
                 HistoryCache.append(
                     candle,
                 )
-
-        if latest is None:
-
-            logger.info(
-                "Loaded %d historical candles for %s",
-                len(candles),
-                instrument.symbol,
-            )
-
-        else:
 
             logger.info(
                 "Synced %d new candles for %s",

@@ -38,6 +38,10 @@ export interface StrategyResponse {
 
     signal_line: number;
 
+    supertrend: number;
+
+    supertrend_signal: string;
+
     reasons: string[];
 
 }

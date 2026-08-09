@@ -247,6 +247,389 @@
     </app-section-card>
 
 
+    <!-- ============================================ -->
+    <!-- AI MARKET ANALYSIS                          -->
+    <!-- ============================================ -->
+
+    <app-section-card title="AI Market Analysis">
+
+        @if (strategyLoading()) {
+
+            <div class="ai-loading">
+
+                <div class="loading">
+
+                    Analyzing
+                    {{ instrument.symbol }}
+                    ...
+
+                </div>
+
+            </div>
+
+        } @else if (strategy(); as analysis) {
+
+            <div class="ai-header">
+
+                <div>
+
+                    <div class="ai-label">
+                        TradePilot Signal
+                    </div>
+
+                    <div
+                        class="signal-badge"
+                        [class.buy]="
+                            analysis.signal === 'BUY'
+                        "
+                        [class.sell]="
+                            analysis.signal === 'SELL'
+                        "
+                        [class.hold]="
+                            analysis.signal === 'HOLD'
+                        "
+                    >
+                        {{ analysis.signal }}
+                    </div>
+
+                </div>
+
+
+                <div class="confidence">
+
+                    <span class="metric-label">
+                        Confidence
+                    </span>
+
+                    <strong>
+                        {{ analysis.confidence }}%
+                    </strong>
+
+                </div>
+
+
+                <div class="tradable-status">
+
+                    <span class="metric-label">
+                        Status
+                    </span>
+
+                    <strong
+                        [class.tradable]="analysis.tradable"
+                        [class.not-tradable]="!analysis.tradable"
+                    >
+                        {{
+                            analysis.tradable
+                                ? 'TRADABLE'
+                                : 'WAIT'
+                        }}
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="ai-summary-grid">
+
+                <div class="ai-metric">
+
+                    <span class="metric-label">
+                        Trend
+                    </span>
+
+                    <strong>
+                        {{ analysis.trend }}
+                    </strong>
+
+                </div>
+
+                <div class="ai-metric">
+
+                    <span class="metric-label">
+                        Timeframe
+                    </span>
+
+                    <strong>
+                        {{ analysis.timeframe }}
+                    </strong>
+
+                </div>
+
+                <div class="ai-metric">
+
+                    <span class="metric-label">
+                        Entry
+                    </span>
+
+                    <strong>
+                        {{ analysis.entry | number:'1.2-2' }}
+                    </strong>
+
+                </div>
+
+                <div class="ai-metric">
+
+                    <span class="metric-label">
+                        Stop Loss
+                    </span>
+
+                    <strong>
+                        {{ analysis.stop_loss | number:'1.2-2' }}
+                    </strong>
+
+                </div>
+
+                <div class="ai-metric">
+
+                    <span class="metric-label">
+                        Target
+                    </span>
+
+                    <strong>
+                        {{ analysis.target | number:'1.2-2' }}
+                    </strong>
+
+                </div>
+
+                <div class="ai-metric">
+
+                    <span class="metric-label">
+                        Risk / Reward
+                    </span>
+
+                    <strong>
+                        1 : {{ analysis.risk_reward | number:'1.0-2' }}
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="indicator-grid">
+
+                <div class="indicator">
+
+                    <span>
+                        EMA 20
+                    </span>
+
+                    <strong>
+                        {{ analysis.ema20 | number:'1.2-2' }}
+                    </strong>
+
+                </div>
+
+                <div class="indicator">
+
+                    <span>
+                        EMA 50
+                    </span>
+
+                    <strong>
+                        {{ analysis.ema50 | number:'1.2-2' }}
+                    </strong>
+
+                </div>
+
+                <div class="indicator">
+
+                    <span>
+                        RSI 14
+                    </span>
+
+                    <strong>
+                        {{ analysis.rsi14 | number:'1.2-2' }}
+                    </strong>
+
+                </div>
+
+                <div class="indicator">
+
+                    <span>
+                        ATR 14
+                    </span>
+
+                    <strong>
+                        {{ analysis.atr14 | number:'1.2-2' }}
+                    </strong>
+
+                </div>
+
+                <div class="indicator">
+
+                    <span>
+                        VWAP
+                    </span>
+
+                    <strong>
+
+                        @if (analysis.vwap != null) {
+
+                            {{ analysis.vwap | number:'1.2-2' }}
+
+                        } @else {
+
+                            —
+
+                        }
+
+                    </strong>
+
+                </div>
+
+                <div class="indicator">
+
+                    <span>
+                        MACD
+                    </span>
+
+                    <strong>
+                        {{ analysis.macd | number:'1.2-4' }}
+                    </strong>
+
+                </div>
+
+                <div class="indicator">
+
+                    <span>
+                        Signal Line
+                    </span>
+
+                    <strong>
+                        {{ analysis.signal_line | number:'1.2-4' }}
+                    </strong>
+
+                </div>
+
+                <div class="indicator">
+
+                    <span>
+                        Supertrend
+                    </span>
+
+                    <strong>
+                        {{ analysis.supertrend | number:'1.2-2' }}
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="analysis-confirmation">
+
+                <div class="confirmation-item">
+
+                    <span class="metric-label">
+                        Supertrend
+                    </span>
+
+                    <strong>
+                        {{ analysis.supertrend_signal }}
+                    </strong>
+
+                </div>
+
+                <div class="confirmation-item">
+
+                    <span class="metric-label">
+                        Market Data
+                    </span>
+
+                    <strong>
+                        {{ dataStatus() }}
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            @if (
+                analysis.reasons.length > 0
+            ) {
+
+                <div class="reasons">
+
+                    <div class="reasons-title">
+                        Why TradePilot generated this signal
+                    </div>
+
+                    <ul>
+
+                        @for (
+                            reason of analysis.reasons;
+                            track reason
+                        ) {
+
+                            <li>
+                                {{ reason }}
+                            </li>
+
+                        }
+
+                    </ul>
+
+                </div>
+
+            }
+
+
+            @if (
+                dataStatus() === 'STALE'
+            ) {
+
+                <div class="ai-warning">
+
+                    This analysis is based on the latest
+                    available market data. The market is
+                    currently outside trading hours, so this
+                    signal should not be treated as a live
+                    trading signal.
+
+                </div>
+
+            }
+
+        } @else {
+
+            <div class="ai-unavailable">
+
+                <div class="ai-unavailable-title">
+                    AI analysis unavailable
+                </div>
+
+                <div class="ai-unavailable-message">
+
+                    {{ strategyError() }}
+
+                </div>
+
+                @if (
+                    dataStatus() === 'STALE'
+                ) {
+
+                    <div class="ai-unavailable-message">
+
+                        The latest candle is stale because the
+                        market is currently outside trading
+                        hours. TradePilot will analyze the stock
+                        when the required live market data is
+                        available.
+
+                    </div>
+
+                }
+
+            </div>
+
+        }
+
+    </app-section-card>
+
+
     <app-section-card title="Price Chart">
 
         <div class="chart-toolbar">

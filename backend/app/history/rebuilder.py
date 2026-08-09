@@ -18,67 +18,124 @@ class HistoryRebuilder:
             if instrument.exchange != "NSE":
                 continue
 
-            candles_1m = HistoryCache.get(
-                exchange=instrument.exchange,
-                token=instrument.token,
-                timeframe="1m",
+            cls.rebuild_symbol(
+                symbol=instrument.symbol,
             )
 
-            if not candles_1m:
-                continue
+    @classmethod
+    def rebuild_symbol(
+        cls,
+        *,
+        symbol: str,
+        timeframe: str | None = None,
+    ) -> None:
 
-            for timeframe, interval in TIMEFRAMES.items():
+        instrument = InstrumentCache.get_by_symbol(
+            exchange="NSE",
+            symbol=symbol,
+        )
 
-                candles_tf = []
+        if instrument is None:
+            return
 
-                for i in range(0, len(candles_1m), interval):
+        candles_1m = HistoryCache.get(
+            exchange=instrument.exchange,
+            token=instrument.token,
+            timeframe="1m",
+        )
 
-                    bucket = candles_1m[i:i + interval]
+        if not candles_1m:
+            return
 
-                    if len(bucket) != interval:
-                        continue
+        requested = (
+            [timeframe]
+            if timeframe
+            else list(TIMEFRAMES.keys())
+        )
 
-                    candles_tf.append(
-                        TimeframeBuilder.create_from_candles(
-                            bucket,
-                            timeframe,
-                        )
-                    )
+        for current_timeframe in requested:
 
-                if not candles_tf:
-                    continue
-
-                HistoryCache.save(
-                    exchange=instrument.exchange,
-                    token=instrument.token,
-                    timeframe=timeframe,
-                    candles=candles_tf,
-                )
+            if current_timeframe == "1m":
 
                 try:
 
                     IndicatorEngine.calculate(
                         symbol=instrument.symbol,
-                        timeframe=timeframe,
+                        timeframe="1m",
                     )
 
-                    StrategyEngine.calculate(
-                        exchange=instrument.exchange,
-                        token=instrument.token,
-                        timeframe=timeframe,
-                    )
-
-                except Exception as e:
+                except Exception as exc:
 
                     print(
                         f"Rebuild error "
-                        f"{instrument.symbol} "
-                        f"{timeframe}: {e}"
+                        f"{instrument.symbol} 1m: {exc}"
                     )
 
-                print(
-                    f"Rebuilt "
-                    f"{instrument.symbol} "
-                    f"{timeframe} "
-                    f"{len(candles_tf)} candles"
+                continue
+
+            interval = TIMEFRAMES.get(
+                current_timeframe,
+            )
+
+            if interval is None:
+                continue
+
+            candles_tf = []
+
+            for i in range(
+                0,
+                len(candles_1m),
+                interval,
+            ):
+
+                bucket = candles_1m[
+                    i:i + interval
+                ]
+
+                if len(bucket) != interval:
+                    continue
+
+                candles_tf.append(
+                    TimeframeBuilder.create_from_candles(
+                        bucket,
+                        current_timeframe,
+                    )
                 )
+
+            if not candles_tf:
+                continue
+
+            HistoryCache.save(
+                exchange=instrument.exchange,
+                token=instrument.token,
+                timeframe=current_timeframe,
+                candles=candles_tf,
+            )
+
+            try:
+
+                IndicatorEngine.calculate(
+                    symbol=instrument.symbol,
+                    timeframe=current_timeframe,
+                )
+
+                StrategyEngine.calculate(
+                    exchange=instrument.exchange,
+                    token=instrument.token,
+                    timeframe=current_timeframe,
+                )
+
+            except Exception as exc:
+
+                print(
+                    f"Rebuild error "
+                    f"{instrument.symbol} "
+                    f"{current_timeframe}: {exc}"
+                )
+
+            print(
+                f"Rebuilt "
+                f"{instrument.symbol} "
+                f"{current_timeframe} "
+                f"{len(candles_tf)} candles"
+            )

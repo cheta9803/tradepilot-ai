@@ -1,3 +1,7 @@
+from app.core.market_session import MarketSession
+from app.history.loader import HistoryLoader
+from app.history.rebuilder import HistoryRebuilder
+from app.history.redis_cache import HistoryCache
 from app.indicators.cache import IndicatorCache
 from app.instruments.cache import InstrumentCache
 from app.live.redis_cache import LiveCache
@@ -9,11 +13,51 @@ from app.strategy.trend import TrendService
 
 class StrategyService:
 
+    @staticmethod
+    def _ensure_indicators(
+        *,
+        symbol: str,
+        exchange: str,
+        token: str,
+        timeframe: str,
+    ) -> dict | None:
+
+        indicators = IndicatorCache.get(
+            exchange=exchange,
+            token=token,
+            timeframe=timeframe,
+        )
+
+        if indicators is not None:
+            return indicators
+
+        #
+        # Bootstrap historical data lazily for the requested
+        # symbol instead of requiring a previous live tick.
+        #
+        HistoryLoader.load(
+            exchange=exchange,
+            token=token,
+        )
+
+        HistoryRebuilder.rebuild_symbol(
+            symbol=symbol,
+            timeframe=timeframe,
+        )
+
+        return IndicatorCache.get(
+            exchange=exchange,
+            token=token,
+            timeframe=timeframe,
+        )
+
     def analyze(
         self,
         symbol: str,
         timeframe: str = "1m",
     ):
+
+        symbol = symbol.upper()
 
         instrument = InstrumentCache.get_by_symbol(
             exchange="NSE",
@@ -21,48 +65,84 @@ class StrategyService:
         )
 
         if instrument is None:
+
             raise ValueError(
                 f"Instrument not found: {symbol}"
             )
 
-        indicators = IndicatorCache.get(
+        indicators = self._ensure_indicators(
+            symbol=symbol,
             exchange=instrument.exchange,
             token=instrument.token,
             timeframe=timeframe,
         )
 
         if indicators is None:
+
             raise ValueError(
-                "Indicators not available."
+                f"Indicators not available for "
+                f"{symbol} {timeframe}."
             )
 
         live = LiveCache.get(
             instrument.token,
         )
 
-        if live is None:
-            raise ValueError(
-                "Live price not available."
+        historical_analysis = False
+
+        if live is not None:
+
+            latest_price = live["ltp"]
+
+        else:
+
+            #
+            # During market hours we still require live data.
+            #
+            if MarketSession.is_open():
+
+                raise ValueError(
+                    "Live price not available."
+                )
+
+            #
+            # Outside market hours, use the latest historical
+            # candle for analysis only.
+            #
+            candles = HistoryCache.get(
+                exchange=instrument.exchange,
+                token=instrument.token,
+                timeframe=timeframe,
             )
 
-        latest_price = live["ltp"]
+            if not candles:
+
+                raise ValueError(
+                    "Historical price not available."
+                )
+
+            latest_price = candles[-1].close
+
+            historical_analysis = True
 
         trend = TrendService.evaluate(
             ema20=indicators["ema20"],
             ema50=indicators["ema50"],
         )
 
-        signal, confidence, reasons = StrategyRules.evaluate(
-            ema20=indicators["ema20"],
-            rsi=indicators["rsi14"],
-            price=latest_price,
-            vwap=indicators["vwap"],
-            macd=indicators["macd"],
-            signal=indicators["signal"],
+        signal, confidence, reasons = (
+            StrategyRules.evaluate(
+                ema20=indicators["ema20"],
+                rsi=indicators["rsi14"],
+                price=latest_price,
+                vwap=indicators["vwap"],
+                macd=indicators["macd"],
+                signal=indicators["signal"],
+            )
         )
 
         #
-        # Supertrend confirmation
+        # Supertrend confirmation.
         #
         supertrend_signal = indicators.get(
             "supertrend_signal",
@@ -74,6 +154,7 @@ class StrategyService:
         ):
 
             signal = StrategyRules.HOLD
+
             confidence = max(
                 confidence - 20,
                 50,
@@ -89,6 +170,7 @@ class StrategyService:
         ):
 
             signal = StrategyRules.HOLD
+
             confidence = max(
                 confidence - 20,
                 50,
@@ -98,32 +180,59 @@ class StrategyService:
                 "Supertrend is BUY"
             )
 
+        #
+        # Trend filter.
+        #
         if (
             trend == TrendService.UPTREND
             and signal == StrategyRules.SELL
         ):
+
             signal = StrategyRules.HOLD
+
             confidence = 50
+
             reasons.append(
-                "SELL ignored because overall trend is UPTREND"
+                "SELL ignored because overall "
+                "trend is UPTREND"
             )
 
         elif (
             trend == TrendService.DOWNTREND
             and signal == StrategyRules.BUY
         ):
+
             signal = StrategyRules.HOLD
+
             confidence = 50
+
             reasons.append(
-                "BUY ignored because overall trend is DOWNTREND"
+                "BUY ignored because overall "
+                "trend is DOWNTREND"
             )
 
-        tradable = signal != StrategyRules.HOLD
+        if historical_analysis:
 
-        stop_loss, target = RiskManager.calculate(
-            signal=signal,
-            entry=latest_price,
-            atr=indicators["atr14"],
+            reasons.append(
+                "Market closed; analysis uses "
+                "the latest historical candle."
+            )
+
+        #
+        # Historical analysis must never be considered
+        # tradable.
+        #
+        tradable = (
+            signal != StrategyRules.HOLD
+            and not historical_analysis
+        )
+
+        stop_loss, target = (
+            RiskManager.calculate(
+                signal=signal,
+                entry=latest_price,
+                atr=indicators["atr14"],
+            )
         )
 
         result = {

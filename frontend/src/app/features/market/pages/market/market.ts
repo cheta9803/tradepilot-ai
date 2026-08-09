@@ -74,6 +74,14 @@ import {
   WatchlistStore,
 } from '../../../watchlist/state/watchlist.store';
 
+import {
+  StrategyService,
+} from '../../../strategy/services/strategy.service';
+
+import {
+  StrategyResponse,
+} from '../../../strategy/models/strategy.model';
+
 
 @Component({
   selector: 'app-market',
@@ -108,6 +116,9 @@ export class Market {
   private readonly marketService =
     inject(MarketService);
 
+  private readonly strategyService =
+    inject(StrategyService);
+
   private readonly realtime =
     inject(MarketStore);
 
@@ -125,6 +136,12 @@ export class Market {
   readonly ltpLoading =
     signal(false);
 
+  readonly strategyLoading =
+    signal(false);
+
+  readonly strategyError =
+    signal('');
+
   readonly search =
     signal('');
 
@@ -139,6 +156,9 @@ export class Market {
 
   readonly ltp =
     signal<number | null>(null);
+
+  readonly strategy =
+    signal<StrategyResponse | null>(null);
 
   readonly selectedTimeframe =
     signal('5m');
@@ -410,6 +430,31 @@ export class Market {
 
 
   // --------------------------------------------------
+  // AI STRATEGY HELPERS
+  // --------------------------------------------------
+
+  readonly strategySignal =
+    computed(() =>
+      this.strategy()?.signal ?? null
+    );
+
+  readonly strategyConfidence =
+    computed(() =>
+      this.strategy()?.confidence ?? null
+    );
+
+  readonly strategyTrend =
+    computed(() =>
+      this.strategy()?.trend ?? null
+    );
+
+  readonly strategyTradable =
+    computed(() =>
+      this.strategy()?.tradable ?? false
+    );
+
+
+  // --------------------------------------------------
   // SIMPLE SVG PRICE CHART
   // --------------------------------------------------
 
@@ -554,9 +599,15 @@ export class Market {
 
     this.ltp.set(null);
 
+    this.strategy.set(null);
+
+    this.strategyError.set('');
+
     this.loadHistory();
 
     this.loadLtp();
+
+    this.loadStrategy();
 
   }
 
@@ -585,6 +636,8 @@ export class Market {
     if (this.selected()) {
 
       this.loadHistory();
+
+      this.loadStrategy();
 
     }
 
@@ -722,6 +775,84 @@ export class Market {
 
 
   // --------------------------------------------------
+  // AI STRATEGY
+  // --------------------------------------------------
+
+  private loadStrategy(): void {
+
+    const instrument =
+      this.selected();
+
+    if (!instrument) {
+
+      return;
+
+    }
+
+    this.strategyLoading.set(
+      true,
+    );
+
+    this.strategyError.set('');
+
+    this.strategyService
+      .analyze(
+        instrument.symbol,
+        this.selectedTimeframe(),
+      )
+      .pipe(
+
+        finalize(() => {
+
+          this.strategyLoading.set(
+            false,
+          );
+
+        }),
+
+        catchError(error => {
+
+          const detail =
+            error?.error?.detail;
+
+          this.strategy.set(
+            null,
+          );
+
+          this.strategyError.set(
+            detail ||
+            'AI strategy is currently unavailable.',
+          );
+
+          return of(
+            null as StrategyResponse | null,
+          );
+
+        }),
+
+      )
+      .subscribe({
+
+        next: response => {
+
+          if (!response) {
+
+            return;
+
+          }
+
+          this.strategy.set(
+            response,
+          );
+
+        },
+
+      });
+
+  }
+
+
+  // --------------------------------------------------
   // WATCHLIST
   // --------------------------------------------------
 
@@ -750,7 +881,7 @@ export class Market {
 
 
   // --------------------------------------------------
-  // AI STRATEGY
+  // AI STRATEGY PAGE
   // --------------------------------------------------
 
   openStrategy(): void {
