@@ -69,6 +69,46 @@
     color: #d32f2f;
 }
 
+.status-dot.closed {
+    color: #ed6c02;
+}
+
+.data-status-detail {
+    font-size: 11px;
+    opacity: 0.65;
+    font-weight: 500;
+}
+
+.market-closed-banner {
+    margin-bottom: 24px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(
+        237,
+        108,
+        2,
+        0.35
+    );
+    background: rgba(
+        237,
+        108,
+        2,
+        0.08
+    );
+}
+
+.market-closed-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.market-closed-message {
+    font-size: 12px;
+    line-height: 1.5;
+    opacity: 0.8;
+}
+
 .price-section {
     margin-bottom: 28px;
 }

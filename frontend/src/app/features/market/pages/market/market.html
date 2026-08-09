@@ -85,18 +85,39 @@
 
                 <span
                     class="status-dot"
-                    [class.live]="dataStatus() === 'LIVE'"
-                    [class.recent]="dataStatus() === 'RECENT'"
-                    [class.stale]="dataStatus() === 'STALE'"
+                    [class.live]="marketSessionOpen()"
+                    [class.closed]="!marketSessionOpen()"
                 ></span>
 
                 <span>
-                    {{ dataStatus() }}
+                    {{ marketStatusLabel() }}
+                </span>
+
+                <span class="data-status-detail">
+                    · {{ dataStatus() }}
                 </span>
 
             </div>
 
         </div>
+
+
+        @if (!marketSessionOpen()) {
+
+            <div class="market-closed-banner">
+
+                <div class="market-closed-title">
+                    Market is currently closed
+                </div>
+
+                <div class="market-closed-message">
+                    Showing the latest available historical data.
+                    Live trading is disabled until the next trading session.
+                </div>
+
+            </div>
+
+        }
 
 
         <div class="price-section">
@@ -140,7 +161,15 @@
 
             <div class="price-label">
 
-                Latest {{ selectedTimeframe() }} candle change
+                @if (marketSessionOpen()) {
+
+                    Latest {{ selectedTimeframe() }} candle change
+
+                } @else {
+
+                    Latest available {{ selectedTimeframe() }} candle · Historical data
+
+                }
 
             </div>
 
@@ -577,17 +606,13 @@
             }
 
 
-            @if (
-                dataStatus() === 'STALE'
-            ) {
+            @if (!marketSessionOpen()) {
 
                 <div class="ai-warning">
 
-                    This analysis is based on the latest
-                    available market data. The market is
-                    currently outside trading hours, so this
-                    signal should not be treated as a live
-                    trading signal.
+                    Historical analysis only. The market is currently
+                    closed, so this signal is not a live trading signal
+                    and live trading is disabled.
 
                 </div>
 
@@ -607,17 +632,13 @@
 
                 </div>
 
-                @if (
-                    dataStatus() === 'STALE'
-                ) {
+                @if (!marketSessionOpen()) {
 
                     <div class="ai-unavailable-message">
 
-                        The latest candle is stale because the
-                        market is currently outside trading
-                        hours. TradePilot will analyze the stock
-                        when the required live market data is
-                        available.
+                        The market is currently closed. Historical
+                        strategy analysis can still be shown, while
+                        live trading remains disabled.
 
                     </div>
 
@@ -713,21 +734,19 @@
     </app-section-card>
 
 
-    @if (
-        dataStatus() === 'STALE'
-    ) {
+    @if (!marketSessionOpen() && latestCandle()) {
 
         <div class="stale-banner">
 
             <div class="stale-title">
-                Market data is stale
+                Market closed · Historical data
             </div>
 
             <div class="stale-message">
 
-                The market may currently be closed or the latest
-                broker data may not be available. The page is
-                showing the latest available candle.
+                The chart and analysis use the latest available
+                completed market candle. Live trading is disabled
+                while the market is closed.
 
             </div>
 

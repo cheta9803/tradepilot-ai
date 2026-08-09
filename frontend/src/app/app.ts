@@ -1,5 +1,6 @@
 import {
   Component,
+  effect,
   inject,
 } from '@angular/core';
 
@@ -36,9 +37,21 @@ export class App {
 
   constructor() {
 
-    this.authStore.restoreSession();
+    effect(() => {
 
-    this.websocket.connect();
+      if (this.authStore.isAuthenticated()) {
+
+        this.websocket.connect();
+
+        return;
+
+      }
+
+      this.websocket.disconnect();
+
+    });
+
+    this.authStore.restoreSession();
 
   }
 

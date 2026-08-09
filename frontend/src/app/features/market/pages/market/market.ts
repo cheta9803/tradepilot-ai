@@ -429,6 +429,75 @@ export class Market {
     });
 
 
+  /**
+   * NSE regular cash-market session state.
+   *
+   * This is only used to describe the current market session in the UI.
+   * It does not disable LTP, WebSocket updates, historical data, or
+   * strategy analysis.
+   */
+  readonly marketSessionOpen =
+    computed(() => {
+
+      const parts =
+        new Intl.DateTimeFormat(
+          'en-IN',
+          {
+            timeZone: 'Asia/Kolkata',
+            weekday: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+            hourCycle: 'h23',
+          },
+        ).formatToParts(
+          new Date(),
+        );
+
+      const values =
+        Object.fromEntries(
+          parts.map(part => [
+            part.type,
+            part.value,
+          ]),
+        );
+
+      const weekday =
+        values['weekday'];
+
+      if (
+        weekday === 'Sat' ||
+        weekday === 'Sun'
+      ) {
+
+        return false;
+
+      }
+
+      const hour =
+        Number(values['hour']);
+
+      const minute =
+        Number(values['minute']);
+
+      const totalMinutes =
+        hour * 60 + minute;
+
+      return (
+        totalMinutes >= 9 * 60 + 15 &&
+        totalMinutes < 15 * 60 + 30
+      );
+
+    });
+
+
+  readonly marketStatusLabel =
+    computed(() =>
+      this.marketSessionOpen()
+        ? 'MARKET OPEN'
+        : 'MARKET CLOSED'
+    );
+
+
   // --------------------------------------------------
   // AI STRATEGY HELPERS
   // --------------------------------------------------

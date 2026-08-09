@@ -14,6 +14,8 @@ export class WebSocketService {
 
     private socket?: WebSocket;
 
+    private shouldReconnect = true;
+
     readonly connected = signal(
         false,
     );
@@ -23,6 +25,8 @@ export class WebSocketService {
     );
 
     connect(): void {
+
+        this.shouldReconnect = true;
 
         if (this.socket) {
             return;
@@ -81,7 +85,15 @@ export class WebSocketService {
 
             this.socket = undefined;
 
+            if (!this.shouldReconnect) {
+                return;
+            }
+
             setTimeout(() => {
+
+                if (!this.shouldReconnect) {
+                    return;
+                }
 
                 console.log(
                     'Reconnecting...',
@@ -103,6 +115,33 @@ export class WebSocketService {
             );
 
         };
+
+    }
+
+    disconnect(): void {
+
+        this.shouldReconnect = false;
+
+        const socket = this.socket;
+
+        if (!socket) {
+
+            this.connected.set(
+                false,
+            );
+
+            return;
+
+        }
+
+        console.log(
+            'Closing websocket...',
+        );
+
+        socket.close(
+            1000,
+            'Client disconnected',
+        );
 
     }
 
