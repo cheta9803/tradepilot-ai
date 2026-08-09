@@ -7,44 +7,218 @@
 .toolbar {
 
     display: flex;
-
     gap: 16px;
-
     align-items: center;
-
     flex-wrap: wrap;
 
 }
 
 .symbol-field {
 
-    width: 300px;
+    width: 280px;
+
+}
+
+.timeframe-field {
+
+    width: 140px;
 
 }
 
 .loading {
 
     display: flex;
-
     justify-content: center;
-
     align-items: center;
-
     padding: 40px;
+    font-size: 16px;
+
+}
+
+.market-closed-banner {
+
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    border: 1px solid rgba(237, 108, 2, 0.25);
+    border-radius: 8px;
+    background: rgba(237, 108, 2, 0.06);
+
+}
+
+.market-closed-banner strong {
+
+    font-size: 13px;
+
+}
+
+.market-closed-banner span {
+
+    font-size: 12px;
+    line-height: 1.5;
+    opacity: 0.75;
+
+}
+
+.recommendation-header {
+
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    margin-bottom: 24px;
+
+}
+
+.eyebrow {
+
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.65;
+
+}
+
+.signal {
+
+    margin-top: 6px;
+    font-size: 32px;
+    line-height: 1.1;
+    font-weight: 700;
+
+}
+
+.trend {
+
+    margin-top: 6px;
+    font-size: 13px;
+    opacity: 0.7;
+
+}
+
+.status {
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    min-width: 130px;
+
+}
+
+.status span {
+
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.6;
+
+}
+
+.status strong {
+
+    font-size: 26px;
+    line-height: 1.1;
+
+}
+
+.status small {
+
+    margin-top: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+
+}
+
+.status.tradable small {
+
+    color: #2e7d32;
+
+}
+
+.status.waiting small {
+
+    color: #ed6c02;
+
+}
+
+.trade-plan {
+
+    display: grid;
+    grid-template-columns: repeat(4, minmax(120px, 1fr));
+    gap: 12px;
+
+}
+
+.trade-plan > div {
+
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    border-radius: 6px;
+    background: rgba(127, 127, 127, 0.05);
+
+}
+
+label {
+
+    font-size: 11px;
+    color: #757575;
+    text-transform: uppercase;
+
+}
+
+.trade-plan strong {
 
     font-size: 16px;
+
+}
+
+.decision-explanation {
+
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(127, 127, 127, 0.14);
+
+}
+
+.decision-title {
+
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.65;
+
+}
+
+.decision-explanation strong {
+
+    display: block;
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 500;
+
+}
+
+.decision-explanation p {
+
+    margin: 8px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    opacity: 0.7;
 
 }
 
 .grid {
 
     display: grid;
-
-    grid-template-columns: repeat(
-        auto-fit,
-        minmax(180px, 1fr)
-    );
-
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 20px;
 
 }
@@ -52,27 +226,14 @@
 .grid div {
 
     display: flex;
-
     flex-direction: column;
-
     gap: 4px;
-
-}
-
-.grid label {
-
-    font-size: 12px;
-
-    color: #757575;
-
-    text-transform: uppercase;
 
 }
 
 .grid strong {
 
     font-size: 18px;
-
     font-weight: 600;
 
 }
@@ -98,7 +259,6 @@
 ul {
 
     margin: 0;
-
     padding-left: 20px;
 
 }
@@ -112,9 +272,29 @@ li {
 .actions {
 
     display: flex;
-
     gap: 16px;
-
     flex-wrap: wrap;
+
+}
+
+@media (max-width: 700px) {
+
+    .recommendation-header {
+
+        flex-direction: column;
+
+    }
+
+    .status {
+
+        align-items: flex-start;
+
+    }
+
+    .trade-plan {
+
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+
+    }
 
 }

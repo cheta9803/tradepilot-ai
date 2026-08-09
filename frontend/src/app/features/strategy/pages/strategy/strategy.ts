@@ -2,6 +2,7 @@ import {
     ChangeDetectionStrategy,
     Component,
     OnInit,
+    computed,
     inject,
 } from '@angular/core';
 
@@ -31,6 +32,10 @@ import {
 } from '@angular/material/input';
 
 import {
+    MatSelectModule,
+} from '@angular/material/select';
+
+import {
     PageHeader,
 } from '../../../../shared/ui/page-header/page-header';
 
@@ -52,6 +57,7 @@ import {
         MatButtonModule,
         MatFormFieldModule,
         MatInputModule,
+        MatSelectModule,
         PageHeader,
         SectionCard,
     ],
@@ -71,9 +77,77 @@ export class Strategy implements OnInit {
 
     symbol = 'RELIANCE';
 
+    timeframe = '1m';
+
+    readonly timeframes = [
+        '1m',
+        '5m',
+        '15m',
+    ];
+
     readonly strategy = this.store.strategy;
 
     readonly loading = this.store.loading;
+
+    readonly statusLabel = computed(() => {
+
+        const analysis = this.strategy();
+
+        if (!analysis) {
+            return '';
+        }
+
+        if (analysis.tradable) {
+            return 'TRADABLE';
+        }
+
+        const marketClosed = analysis.reasons.some(
+            reason =>
+                reason.toLowerCase().includes('market closed'),
+        );
+
+        if (marketClosed) {
+            return 'WAIT — MARKET CLOSED';
+        }
+
+        return 'WAIT';
+
+    });
+
+    readonly decisionTitle = computed(() => {
+
+        const analysis = this.strategy();
+
+        if (!analysis) {
+            return '';
+        }
+
+        if (analysis.signal === 'BUY') {
+            return analysis.tradable
+                ? 'Buy conditions are confirmed.'
+                : 'Buy conditions are confirmed historically.';
+        }
+
+        if (analysis.signal === 'SELL') {
+            return analysis.tradable
+                ? 'Sell conditions are confirmed.'
+                : 'Sell conditions are confirmed historically.';
+        }
+
+        return 'The indicators do not provide enough confirmation for a trade.';
+
+    });
+
+    readonly marketClosed = computed(() => {
+
+        const analysis = this.strategy();
+
+        return !!analysis && analysis.reasons.some(
+            reason =>
+                reason.toLowerCase().includes('market closed'),
+        );
+
+    });
 
     ngOnInit(): void {
 
@@ -83,6 +157,10 @@ export class Strategy implements OnInit {
                 this.symbol =
                     params.get('symbol')
                     ?? 'RELIANCE';
+
+                this.timeframe =
+                    params.get('timeframe')
+                    ?? '1m';
 
                 this.load();
 
@@ -97,6 +175,7 @@ export class Strategy implements OnInit {
             this.symbol
                 .trim()
                 .toUpperCase(),
+            this.timeframe,
         );
 
     }

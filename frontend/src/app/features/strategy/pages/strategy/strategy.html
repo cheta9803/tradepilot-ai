@@ -1,4 +1,7 @@
-<app-page-header title="AI Strategy" subtitle="AI generated trading recommendation">
+<app-page-header
+    title="AI Strategy"
+    subtitle="AI generated intraday trading recommendation"
+>
 </app-page-header>
 
 <app-section-card title="Analyze Symbol">
@@ -7,20 +10,42 @@
 
         <mat-form-field appearance="outline" class="symbol-field">
 
-            <mat-label>
+            <mat-label>Symbol</mat-label>
 
-                Symbol
-
-            </mat-label>
-
-            <input matInput [(ngModel)]="symbol" placeholder="RELIANCE">
+            <input
+                matInput
+                [(ngModel)]="symbol"
+                placeholder="RELIANCE"
+                (keyup.enter)="load()"
+            >
 
         </mat-form-field>
 
-        <button mat-flat-button color="primary" (click)="load()">
+        <mat-form-field appearance="outline" class="timeframe-field">
 
+            <mat-label>Timeframe</mat-label>
+
+            <mat-select [(ngModel)]="timeframe">
+
+                @for (option of timeframes; track option) {
+
+                    <mat-option [value]="option">
+                        {{ option }}
+                    </mat-option>
+
+                }
+
+            </mat-select>
+
+        </mat-form-field>
+
+        <button
+            mat-flat-button
+            color="primary"
+            [disabled]="loading()"
+            (click)="load()"
+        >
             Analyze
-
         </button>
 
     </div>
@@ -29,327 +54,218 @@
 
 @if (loading()) {
 
-<app-section-card title="Strategy">
+    <app-section-card title="Strategy">
 
-    <div class="loading">
+        <div class="loading">
+            Loading strategy...
+        </div>
 
-        Loading strategy...
-
-    </div>
-
-</app-section-card>
+    </app-section-card>
 
 }
 
 @if (strategy(); as s) {
 
-<app-section-card title="Recommendation">
+    @if (marketClosed()) {
 
-    <div class="grid">
+        <div class="market-closed-banner">
 
-        <div>
+            <strong>Market is currently closed</strong>
 
-            <label>
-
-                Symbol
-
-            </label>
-
-            <strong>
-
-                {{ s.symbol }}
-
-            </strong>
+            <span>
+                This is historical analysis using the latest available candle.
+                Live trading is disabled until the next trading session.
+            </span>
 
         </div>
 
-        <div>
+    }
 
-            <label>
+    <app-section-card title="Recommendation">
 
-                Timeframe
+        <div class="recommendation-header">
 
-            </label>
+            <div>
 
-            <strong>
+                <div class="eyebrow">
+                    {{ s.symbol }} · {{ s.timeframe }}
+                </div>
 
-                {{ s.timeframe }}
+                <div
+                    class="signal"
+                    [ngClass]="{
+                        buy: s.signal === 'BUY',
+                        sell: s.signal === 'SELL',
+                        hold: s.signal === 'HOLD'
+                    }"
+                >
+                    {{ s.signal }}
+                </div>
 
-            </strong>
+                <div class="trend">
+                    {{ s.trend }}
+                </div>
+
+            </div>
+
+            <div
+                class="status"
+                [ngClass]="{
+                    tradable: s.tradable,
+                    waiting: !s.tradable
+                }"
+            >
+                <span>Confidence</span>
+                <strong>{{ s.confidence }}%</strong>
+                <small>{{ statusLabel() }}</small>
+            </div>
 
         </div>
 
-        <div>
+        <div class="trade-plan">
 
-            <label>
+            <div>
+                <label>Entry</label>
+                <strong>{{ s.entry | number:'1.2-2' }}</strong>
+            </div>
 
-                Trend
+            <div>
+                <label>Stop Loss</label>
+                <strong>{{ s.stop_loss | number:'1.2-2' }}</strong>
+            </div>
 
-            </label>
+            <div>
+                <label>Target</label>
+                <strong>{{ s.target | number:'1.2-2' }}</strong>
+            </div>
 
-            <strong>
-
-                {{ s.trend }}
-
-            </strong>
+            <div>
+                <label>Risk / Reward</label>
+                <strong>1 : {{ s.risk_reward }}</strong>
+            </div>
 
         </div>
 
-        <div>
+        <div class="decision-explanation">
 
-            <label>
+            <div class="decision-title">
+                TradePilot Decision
+            </div>
 
-                Signal
+            <strong>{{ decisionTitle() }}</strong>
 
-            </label>
+            @if (!s.tradable) {
 
-            <strong [ngClass]="{
-                    buy: s.signal === 'BUY',
-                    sell: s.signal === 'SELL',
-                    hold: s.signal === 'HOLD'
+                <p>
+                    The strategy signal describes the market setup, while the
+                    trading status determines whether an order can currently be taken.
+                </p>
+
+            }
+
+        </div>
+
+    </app-section-card>
+
+    <app-section-card title="Indicators">
+
+        <div class="grid">
+
+            <div>
+                <label>EMA20</label>
+                <strong>{{ s.ema20 | number:'1.2-2' }}</strong>
+            </div>
+
+            <div>
+                <label>EMA50</label>
+                <strong>{{ s.ema50 | number:'1.2-2' }}</strong>
+            </div>
+
+            <div>
+                <label>RSI14</label>
+                <strong>{{ s.rsi14 | number:'1.2-2' }}</strong>
+            </div>
+
+            <div>
+                <label>ATR14</label>
+                <strong>{{ s.atr14 | number:'1.2-2' }}</strong>
+            </div>
+
+            <div>
+                <label>VWAP</label>
+                <strong>{{ s.vwap | number:'1.2-2' }}</strong>
+            </div>
+
+            <div>
+                <label>MACD</label>
+                <strong>{{ s.macd | number:'1.2-2' }}</strong>
+            </div>
+
+            <div>
+                <label>Signal Line</label>
+                <strong>{{ s.signal_line | number:'1.2-2' }}</strong>
+            </div>
+
+            <div>
+                <label>Supertrend</label>
+                <strong>{{ s.supertrend | number:'1.2-2' }}</strong>
+            </div>
+
+            <div>
+                <label>Supertrend Signal</label>
+                <strong [ngClass]="{
+                    buy: s.supertrend_signal === 'BUY',
+                    sell: s.supertrend_signal === 'SELL'
                 }">
-
-                {{ s.signal }}
-
-            </strong>
-
-        </div>
-
-        <div>
-
-            <label>
-
-                Confidence
-
-            </label>
-
-            <strong>
-
-                {{ s.confidence }}%
-
-            </strong>
+                    {{ s.supertrend_signal }}
+                </strong>
+            </div>
 
         </div>
 
-        <div>
+    </app-section-card>
 
-            <label>
+    @if (s.reasons.length > 0) {
 
-                Tradable
+        <app-section-card title="Why TradePilot generated this signal">
 
-            </label>
+            <ul>
 
-            <strong>
+                @for (reason of s.reasons; track reason) {
 
-                {{ s.tradable ? 'YES' : 'NO' }}
+                    <li>{{ reason }}</li>
 
-            </strong>
+                }
 
-        </div>
+            </ul>
 
-        <div>
+        </app-section-card>
 
-            <label>
+    }
 
-                Entry
+    <app-section-card title="Actions">
 
-            </label>
+        <div class="actions">
 
-            <strong>
+            <button
+                mat-raised-button
+                color="primary"
+                [disabled]="!s.tradable || store.creatingPaperTrade()"
+                (click)="store.createPaperTrade()"
+            >
+                {{ store.creatingPaperTrade() ? 'Creating...' : 'Paper Trade' }}
+            </button>
 
-                {{ s.entry | number:'1.2-2' }}
-
-            </strong>
-
-        </div>
-
-        <div>
-
-            <label>
-
-                Stop Loss
-
-            </label>
-
-            <strong>
-
-                {{ s.stop_loss | number:'1.2-2' }}
-
-            </strong>
+            <button
+                mat-flat-button
+                color="accent"
+                disabled
+            >
+                Live Trade
+            </button>
 
         </div>
 
-        <div>
-
-            <label>
-
-                Target
-
-            </label>
-
-            <strong>
-
-                {{ s.target | number:'1.2-2' }}
-
-            </strong>
-
-        </div>
-
-        <div>
-
-            <label>
-
-                Risk Reward
-
-            </label>
-
-            <strong>
-
-                {{ s.risk_reward }}
-
-            </strong>
-
-        </div>
-
-        <div>
-
-            <label>
-
-                EMA20
-
-            </label>
-
-            <strong>
-
-                {{ s.ema20 | number:'1.2-2' }}
-
-            </strong>
-
-        </div>
-
-        <div>
-
-            <label>
-
-                EMA50
-
-            </label>
-
-            <strong>
-
-                {{ s.ema50 | number:'1.2-2' }}
-
-            </strong>
-
-        </div>
-
-        <div>
-
-            <label>
-
-                RSI
-
-            </label>
-
-            <strong>
-
-                {{ s.rsi14 | number:'1.2-2' }}
-
-            </strong>
-
-        </div>
-
-        <div>
-
-            <label>
-
-                ATR
-
-            </label>
-
-            <strong>
-
-                {{ s.atr14 | number:'1.2-2' }}
-
-            </strong>
-
-        </div>
-
-        <div>
-
-            <label>
-
-                VWAP
-
-            </label>
-
-            <strong>
-
-                {{ s.vwap | number:'1.2-2' }}
-
-            </strong>
-
-        </div>
-
-        <div>
-
-            <label>
-
-                MACD
-
-            </label>
-
-            <strong>
-
-                {{ s.macd | number:'1.2-2' }}
-
-            </strong>
-
-        </div>
-
-    </div>
-
-</app-section-card>
-
-<app-section-card title="Reasons">
-
-    <ul>
-
-        @for (reason of s.reasons; track reason) {
-
-        <li>
-
-            {{ reason }}
-
-        </li>
-
-        }
-
-    </ul>
-
-</app-section-card>
-
-<app-section-card title="Actions">
-
-    <div class="actions">
-
-        <button mat-raised-button color="primary" [disabled]="
-        !store.strategy()?.tradable ||
-        store.creatingPaperTrade()
-    " (click)="store.createPaperTrade()">
-
-            Paper Trade
-
-        </button>
-
-        <button mat-flat-button color="accent">
-
-            Live Trade
-
-        </button>
-
-    </div>
-
-</app-section-card>
+    </app-section-card>
 
 }
