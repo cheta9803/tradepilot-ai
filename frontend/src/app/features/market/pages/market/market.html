@@ -347,11 +347,7 @@
                         [class.tradable]="analysis.tradable"
                         [class.not-tradable]="!analysis.tradable"
                     >
-                        {{
-                            analysis.tradable
-                                ? 'TRADABLE'
-                                : 'WAIT'
-                        }}
+                        {{ strategyStatusLabel() }}
                     </strong>
 
                 </div>

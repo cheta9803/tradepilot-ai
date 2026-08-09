@@ -271,6 +271,82 @@
     color: #ed6c02;
 }
 
+.decision-explanation {
+    margin-top: 24px;
+    padding: 18px;
+    border-radius: 8px;
+    border: 1px solid rgba(127, 127, 127, 0.18);
+    background: rgba(127, 127, 127, 0.04);
+}
+
+.decision-explanation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+}
+
+.decision-explanation-header strong {
+    display: block;
+    margin-top: 6px;
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 500;
+}
+
+.decision-state {
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.decision-state.buy {
+    color: #2e7d32;
+    background: rgba(46, 125, 50, 0.12);
+}
+
+.decision-state.sell {
+    color: #d32f2f;
+    background: rgba(211, 47, 47, 0.12);
+}
+
+.decision-state.hold {
+    color: #ed6c02;
+    background: rgba(237, 108, 2, 0.12);
+}
+
+.decision-factors {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(127, 127, 127, 0.14);
+}
+
+.decision-factors-title {
+    margin-bottom: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.65;
+}
+
+.decision-factors-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.decision-factor {
+    padding: 6px 9px;
+    border-radius: 6px;
+    background: rgba(63, 81, 181, 0.07);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
 .ai-summary-grid {
     display: grid;
     grid-template-columns: repeat(
@@ -569,6 +645,14 @@
 
     .market-header {
         flex-direction: column;
+    }
+
+    .decision-explanation-header {
+        flex-direction: column;
+    }
+
+    .decision-state {
+        align-self: flex-start;
     }
 
     .current-price {

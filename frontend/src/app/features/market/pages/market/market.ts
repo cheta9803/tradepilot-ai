@@ -523,6 +523,35 @@ export class Market {
     );
 
 
+  readonly strategyStatusLabel =
+    computed(() => {
+
+      const analysis =
+        this.strategy();
+
+      if (!analysis) {
+
+        return '';
+
+      }
+
+      if (analysis.tradable) {
+
+        return 'TRADABLE';
+
+      }
+
+      if (!this.marketSessionOpen()) {
+
+        return 'WAIT — MARKET CLOSED';
+
+      }
+
+      return 'WAIT';
+
+    });
+
+
   // --------------------------------------------------
   // SIMPLE SVG PRICE CHART
   // --------------------------------------------------
