@@ -10,13 +10,14 @@ class HistoryDateUtils:
     MARKET_CLOSE_HOUR = 15
     MARKET_CLOSE_MINUTE = 30
 
+    WARMUP_TRADING_DAYS = 10
+
     @classmethod
     def get_history_range(
         cls,
     ) -> tuple[datetime, datetime]:
 
         now = datetime.now()
-
         trading_day = cls._get_trading_day(now)
 
         market_open = trading_day.replace(
@@ -33,50 +34,65 @@ class HistoryDateUtils:
             microsecond=0,
         )
 
-        # Before market opens today.
-        # Use the previous trading day's full session.
         if trading_day.date() != now.date():
+            return market_open, market_close
 
-            return (
-                market_open,
-                market_close,
-            )
-
-        # Before 09:15 today.
         if now < market_open:
-
             previous = cls._previous_trading_day(now)
+            return cls._session_range(previous)
 
-            return (
-                previous.replace(
-                    hour=cls.MARKET_OPEN_HOUR,
-                    minute=cls.MARKET_OPEN_MINUTE,
-                    second=0,
-                    microsecond=0,
-                ),
-                previous.replace(
-                    hour=cls.MARKET_CLOSE_HOUR,
-                    minute=cls.MARKET_CLOSE_MINUTE,
-                    second=0,
-                    microsecond=0,
-                ),
-            )
-
-        # During market hours.
         if now <= market_close:
-
             return (
                 market_open,
-                now.replace(
-                    second=0,
-                    microsecond=0,
-                ),
+                now.replace(second=0, microsecond=0),
             )
 
-        # After market close.
+        return market_open, market_close
+
+    @classmethod
+    def get_warmup_range(
+        cls,
+        trading_days: int | None = None,
+    ) -> tuple[datetime, datetime]:
+        """Return a multi-session range suitable for indicator warm-up."""
+
+        days = trading_days or cls.WARMUP_TRADING_DAYS
+        if days < 1:
+            raise ValueError("trading_days must be >= 1")
+
+        _, end = cls.get_history_range()
+        current_day = cls._get_trading_day(datetime.now())
+
+        start_day = current_day
+        remaining = days - 1
+
+        while remaining > 0:
+            start_day -= timedelta(days=1)
+            if start_day.weekday() < 5:
+                remaining -= 1
+
+        start, _ = cls._session_range(start_day)
+        return start, end
+
+    @classmethod
+    def _session_range(
+        cls,
+        trading_day: datetime,
+    ) -> tuple[datetime, datetime]:
+
         return (
-            market_open,
-            market_close,
+            trading_day.replace(
+                hour=cls.MARKET_OPEN_HOUR,
+                minute=cls.MARKET_OPEN_MINUTE,
+                second=0,
+                microsecond=0,
+            ),
+            trading_day.replace(
+                hour=cls.MARKET_CLOSE_HOUR,
+                minute=cls.MARKET_CLOSE_MINUTE,
+                second=0,
+                microsecond=0,
+            ),
         )
 
     @classmethod
@@ -87,11 +103,9 @@ class HistoryDateUtils:
 
         weekday = now.weekday()
 
-        # Saturday
         if weekday == 5:
             return now - timedelta(days=1)
 
-        # Sunday
         if weekday == 6:
             return now - timedelta(days=2)
 

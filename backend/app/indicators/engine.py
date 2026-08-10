@@ -1,5 +1,5 @@
 from app.candles.models import Candle
-from app.history.loader import HistoryLoader
+
 from app.history.redis_cache import HistoryCache
 from app.indicators.cache import IndicatorCache
 from app.indicators.calculators.atr import ATRCalculator
@@ -11,7 +11,6 @@ from app.indicators.calculators.supertrend import (
     SupertrendCalculator,
 )
 from app.indicators.calculators.vwap import VWAPCalculator
-from app.indicators.repository import IndicatorRepository
 from app.instruments.cache import InstrumentCache
 from app.patterns.engine import PatternEngine
 from app.timeframes.builder import TimeframeBuilder
@@ -54,43 +53,28 @@ class IndicatorEngine:
         )
 
         if instrument is None:
-
             raise ValueError(
                 f"Instrument '{symbol}' not found."
             )
 
-        repository = IndicatorRepository()
-
-        try:
-
-            candles = repository.get_candles(
-                symbol=symbol,
-                timeframe=timeframe,
-            )
-
-        except ValueError:
-
-            candles = []
-
         required = cls._required_candles()
 
-        #
-        # Existing cache is sufficient.
-        #
-        if len(candles) >= required:
+        if timeframe == "1m":
 
-            return candles
+            candles_1m = HistoryCache.get(
+                exchange=instrument.exchange,
+                token=instrument.token,
+                timeframe="1m",
+            )
 
-        #
-        # We are missing enough history for the requested
-        # timeframe. Load the latest completed trading day's
-        # 1m history directly into HistoryCache.
-        #
-        HistoryLoader.load(
-            exchange=instrument.exchange,
-            token=instrument.token,
-            refresh=True,
-        )
+            return candles_1m
+
+        interval = TIMEFRAMES.get(timeframe)
+
+        if interval is None:
+            raise ValueError(
+                f"Unsupported timeframe: {timeframe}"
+            )
 
         candles_1m = HistoryCache.get(
             exchange=instrument.exchange,
@@ -98,49 +82,14 @@ class IndicatorEngine:
             timeframe="1m",
         )
 
-        if timeframe == "1m":
-
-            return candles_1m
-
-        interval = TIMEFRAMES.get(
-            timeframe,
-        )
-
-        if interval is None:
-
-            raise ValueError(
-                f"Unsupported timeframe: {timeframe}"
-            )
-
         if not candles_1m:
-
             return []
 
-        #
-        # Build completed timeframe candles from 1m candles.
-        #
-        candles_tf: list[Candle] = []
-
-        for i in range(
-            0,
-            len(candles_1m),
+        candles_tf = TimeframeBuilder.build_completed(
+            candles_1m,
+            timeframe,
             interval,
-        ):
-
-            bucket = candles_1m[
-                i:i + interval
-            ]
-
-            if len(bucket) != interval:
-
-                continue
-
-            candles_tf.append(
-                TimeframeBuilder.create_from_candles(
-                    bucket,
-                    timeframe,
-                )
-            )
+        )
 
         if candles_tf:
 
@@ -247,6 +196,7 @@ class IndicatorEngine:
             )
 
         values = {
+            "candle_timestamp": candles[-1].timestamp.isoformat(),
             "ema20": ema20,
             "ema50": ema50,
             "sma20": sma20,

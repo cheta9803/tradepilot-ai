@@ -9,7 +9,8 @@ class HistoryCache:
 
     PREFIX = "history"
 
-    MAX_CANDLES = 375
+    # Enough 1m candles for 50 x 1h indicators with warm-up headroom.
+    MAX_CANDLES = 4000
 
     @classmethod
     def _key(
@@ -36,36 +37,32 @@ class HistoryCache:
         candles: list[Candle],
     ) -> None:
 
+        candles = sorted(
+            candles,
+            key=lambda candle: candle.timestamp,
+        )[-cls.MAX_CANDLES:]
+
         redis_client.set(
-            cls._key(
-                exchange,
-                token,
-                timeframe,
-            ),
-            json.dumps(
-                [
-                    {
-                        "exchange": candle.exchange,
-                        "symbol": candle.symbol,
-                        "token": candle.token,
-                        "timeframe": candle.timeframe,
-                        "timestamp": candle.timestamp.isoformat(),
-                        "open": candle.open,
-                        "high": candle.high,
-                        "low": candle.low,
-                        "close": candle.close,
-                        "volume": candle.volume,
-                    }
-                    for candle in candles
-                ]
-            ),
+            cls._key(exchange, token, timeframe),
+            json.dumps([
+                {
+                    "exchange": candle.exchange,
+                    "symbol": candle.symbol,
+                    "token": candle.token,
+                    "timeframe": candle.timeframe,
+                    "timestamp": candle.timestamp.isoformat(),
+                    "open": candle.open,
+                    "high": candle.high,
+                    "low": candle.low,
+                    "close": candle.close,
+                    "volume": candle.volume,
+                }
+                for candle in candles
+            ]),
         )
 
     @classmethod
-    def append(
-        cls,
-        candle: Candle,
-    ) -> None:
+    def append(cls, candle: Candle) -> None:
 
         candles = cls.get(
             exchange=candle.exchange,
@@ -73,25 +70,17 @@ class HistoryCache:
             timeframe=candle.timeframe,
         )
 
-        if candles:
-
-            last = candles[-1]
-
-            if last.timestamp == candle.timestamp:
-                candles[-1] = candle
-            else:
-                candles.append(candle)
-
-        else:
-            candles = [candle]
-
-        candles = candles[-cls.MAX_CANDLES :]
+        by_timestamp = {
+            item.timestamp: item
+            for item in candles
+        }
+        by_timestamp[candle.timestamp] = candle
 
         cls.save(
             exchange=candle.exchange,
             token=candle.token,
             timeframe=candle.timeframe,
-            candles=candles,
+            candles=list(by_timestamp.values()),
         )
 
     @classmethod
@@ -104,11 +93,7 @@ class HistoryCache:
     ) -> list[Candle]:
 
         value = redis_client.get(
-            cls._key(
-                exchange,
-                token,
-                timeframe,
-            )
+            cls._key(exchange, token, timeframe),
         )
 
         if value is None:
@@ -116,28 +101,21 @@ class HistoryCache:
 
         data = json.loads(value)
 
-        candles: list[Candle] = []
-
-        for item in data:
-
-            candles.append(
-                Candle(
-                    exchange=item["exchange"],
-                    symbol=item["symbol"],
-                    token=item["token"],
-                    timeframe=item["timeframe"],
-                    timestamp=datetime.fromisoformat(
-                        item["timestamp"],
-                    ),
-                    open=item["open"],
-                    high=item["high"],
-                    low=item["low"],
-                    close=item["close"],
-                    volume=item["volume"],
-                )
+        return [
+            Candle(
+                exchange=item["exchange"],
+                symbol=item["symbol"],
+                token=item["token"],
+                timeframe=item["timeframe"],
+                timestamp=datetime.fromisoformat(item["timestamp"]),
+                open=item["open"],
+                high=item["high"],
+                low=item["low"],
+                close=item["close"],
+                volume=item["volume"],
             )
-
-        return candles
+            for item in data
+        ]
 
     @classmethod
     def delete(
@@ -149,11 +127,7 @@ class HistoryCache:
     ) -> None:
 
         redis_client.delete(
-            cls._key(
-                exchange,
-                token,
-                timeframe,
-            )
+            cls._key(exchange, token, timeframe),
         )
 
     @classmethod

@@ -11,6 +11,11 @@ class HistoryLoader:
 
     TIMEFRAME = "1m"
 
+    # 3,000 one-minute candles provide enough source data for 50 completed
+    # 1-hour candles, which is the largest timeframe currently used by the
+    # indicator/strategy pipeline.
+    MIN_WARMUP_CANDLES = 3000
+
     @staticmethod
     def load(
         *,
@@ -19,51 +24,54 @@ class HistoryLoader:
         refresh: bool = False,
     ) -> None:
 
-        instrument = InstrumentCache.get_by_token(
-            token,
-        )
-
+        instrument = InstrumentCache.get_by_token(token)
         if instrument is None:
             return
 
-        latest = None
+        existing = HistoryCache.get(
+            exchange=exchange,
+            token=token,
+            timeframe=HistoryLoader.TIMEFRAME,
+        )
 
-        if not refresh:
-
-            latest = HistoryCache.get_latest_timestamp(
-                exchange=exchange,
-                token=token,
-                timeframe=HistoryLoader.TIMEFRAME,
-            )
+        latest = (
+            existing[-1].timestamp
+            if existing
+            else None
+        )
 
         logger.debug(
-            "%s: latest cached candle = %s",
+            "%s: cached 1m candles=%d, latest=%s",
             instrument.symbol,
+            len(existing),
             latest,
         )
 
-        #
-        # When refreshing, deliberately fetch the latest
-        # completed trading-day history again.
-        #
-        if refresh or latest is None:
+        # A small DB cache is not sufficient for higher-timeframe indicators.
+        # Fetch the full warm-up range instead of only requesting today's tail.
+        needs_warmup = (
+            refresh
+            or latest is None
+            or len(existing) < HistoryLoader.MIN_WARMUP_CANDLES
+        )
 
-            history = HistoryService.get_last_day(
+        if needs_warmup:
+            logger.info(
+                "%s: history warm-up required. Cached 1m candles: %d",
+                instrument.symbol,
+                len(existing),
+            )
+            history = HistoryService.get_warmup(
                 exchange=exchange,
                 token=token,
             )
-
         else:
-
             history = HistoryService.get_since(
                 exchange=exchange,
                 token=token,
                 from_date=latest,
             )
 
-            #
-            # Angel One may return the last cached candle again.
-            #
             if history:
                 history = history[1:]
 
@@ -73,15 +81,12 @@ class HistoryLoader:
         candles = []
 
         for row in history:
-
             candle = CandleBuilder.create(
                 exchange=exchange,
                 symbol=instrument.symbol,
                 token=token,
                 timeframe=HistoryLoader.TIMEFRAME,
-                timestamp=datetime.fromisoformat(
-                    row[0],
-                ).replace(
+                timestamp=datetime.fromisoformat(row[0]).replace(
                     second=0,
                     microsecond=0,
                 ),
@@ -93,37 +98,33 @@ class HistoryLoader:
             candle.high = float(row[2])
             candle.low = float(row[3])
             candle.close = float(row[4])
-
             candles.append(candle)
 
-        #
-        # A refresh replaces the existing 1m cache.
-        #
-        if refresh or latest is None:
+        if not candles:
+            return
 
-            HistoryCache.save(
-                exchange=exchange,
-                token=token,
-                timeframe=HistoryLoader.TIMEFRAME,
-                candles=candles,
-            )
+        by_timestamp = {
+            candle.timestamp: candle
+            for candle in existing
+        }
 
-            logger.info(
-                "Refreshed %d historical candles for %s",
-                len(candles),
-                instrument.symbol,
-            )
+        for candle in candles:
+            by_timestamp[candle.timestamp] = candle
 
-        else:
+        merged = sorted(
+            by_timestamp.values(),
+            key=lambda candle: candle.timestamp,
+        )
 
-            for candle in candles:
+        HistoryCache.save(
+            exchange=exchange,
+            token=token,
+            timeframe=HistoryLoader.TIMEFRAME,
+            candles=merged,
+        )
 
-                HistoryCache.append(
-                    candle,
-                )
-
-            logger.info(
-                "Synced %d new candles for %s",
-                len(candles),
-                instrument.symbol,
-            )
+        logger.info(
+            "%s: history cache now contains %d 1m candles",
+            instrument.symbol,
+            len(merged),
+        )

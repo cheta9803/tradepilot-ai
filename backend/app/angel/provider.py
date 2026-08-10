@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta
+from threading import Lock
+from time import monotonic, sleep
 
 from app.angel.client import AngelClient
 from app.angel.exceptions import AngelAPIException
@@ -8,6 +10,10 @@ from app.market.provider import MarketProvider
 
 
 class AngelMarketProvider(MarketProvider):
+
+    _history_lock = Lock()
+    _last_history_request = 0.0
+    HISTORY_MIN_INTERVAL_SECONDS = 0.4
 
     INTERVAL_MAP = {
         "1m": "ONE_MINUTE",
@@ -55,8 +61,18 @@ class AngelMarketProvider(MarketProvider):
             timedelta(days=5)
         )
 
-        response = smart_api.getCandleData(
-            {
+        with self._history_lock:
+            now = monotonic()
+            wait = self.HISTORY_MIN_INTERVAL_SECONDS - (
+                now - self._last_history_request
+            )
+            if wait > 0:
+                sleep(wait)
+            self._last_history_request = monotonic()
+
+        try:
+            response = smart_api.getCandleData(
+                {
                 "exchange": instrument.exchange,
                 "symboltoken": instrument.token,
                 "interval": interval,
@@ -66,8 +82,22 @@ class AngelMarketProvider(MarketProvider):
                 "todate": to_date.strftime(
                     "%Y-%m-%d %H:%M"
                 ),
-            }
-        )
+                }
+            )
+        except Exception as exc:
+            message = str(exc)
+            if (
+                "too many requests" in message.lower()
+                or "exceeding access rate" in message.lower()
+                or "ab1021" in message.lower()
+            ):
+                raise AngelAPIException(
+                    "Angel One historical data rate limit reached. Please retry shortly."
+                ) from exc
+
+            raise AngelAPIException(
+                f"Unable to fetch historical data: {message}"
+            ) from exc
 
         if not response.get("status"):
 

@@ -1,7 +1,6 @@
 from app.history.redis_cache import HistoryCache
 from app.indicators.engine import IndicatorEngine
 from app.instruments.cache import InstrumentCache
-from app.strategy.engine import StrategyEngine
 from app.timeframes.builder import TimeframeBuilder
 from app.timeframes.config import TIMEFRAMES
 
@@ -9,13 +8,28 @@ from app.timeframes.config import TIMEFRAMES
 class HistoryRebuilder:
 
     @classmethod
-    def rebuild(cls) -> None:
+    def rebuild(
+        cls,
+        *,
+        instruments: list[tuple[str, str]] | None = None,
+    ) -> None:
 
-        instruments = InstrumentCache.get_all()
+        if instruments is None:
+            selected = [
+                (instrument.exchange, instrument.token)
+                for instrument in InstrumentCache.get_all()
+                if instrument.exchange == "NSE"
+            ]
+        else:
+            selected = list(instruments)
 
-        for instrument in instruments:
+        for exchange, token in selected:
 
-            if instrument.exchange != "NSE":
+            if exchange != "NSE":
+                continue
+
+            instrument = InstrumentCache.get_by_token(token)
+            if instrument is None:
                 continue
 
             cls.rebuild_symbol(
@@ -80,27 +94,11 @@ class HistoryRebuilder:
             if interval is None:
                 continue
 
-            candles_tf = []
-
-            for i in range(
-                0,
-                len(candles_1m),
+            candles_tf = TimeframeBuilder.build_completed(
+                candles_1m,
+                current_timeframe,
                 interval,
-            ):
-
-                bucket = candles_1m[
-                    i:i + interval
-                ]
-
-                if len(bucket) != interval:
-                    continue
-
-                candles_tf.append(
-                    TimeframeBuilder.create_from_candles(
-                        bucket,
-                        current_timeframe,
-                    )
-                )
+            )
 
             if not candles_tf:
                 continue
@@ -116,12 +114,6 @@ class HistoryRebuilder:
 
                 IndicatorEngine.calculate(
                     symbol=instrument.symbol,
-                    timeframe=current_timeframe,
-                )
-
-                StrategyEngine.calculate(
-                    exchange=instrument.exchange,
-                    token=instrument.token,
                     timeframe=current_timeframe,
                 )
 

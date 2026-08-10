@@ -51,6 +51,8 @@ class Settings(BaseSettings):
 
     paper_trading: bool = True
 
+    live_trading_enabled: bool = False
+
     market_close_hour: int = 15
 
     market_close_minute: int = 20

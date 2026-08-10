@@ -16,8 +16,21 @@ class HistoryService:
         token: str,
     ) -> list[dict]:
 
+        return cls.get_warmup(
+            exchange=exchange,
+            token=token,
+        )
+
+    @classmethod
+    def get_warmup(
+        cls,
+        *,
+        exchange: str,
+        token: str,
+    ) -> list[dict]:
+
         from_date, to_date = (
-            HistoryDateUtils.get_history_range()
+            HistoryDateUtils.get_warmup_range()
         )
 
         return HistoryClient.get_candles(
@@ -37,9 +50,7 @@ class HistoryService:
         from_date: datetime,
     ) -> list[dict]:
 
-        _, to_date = (
-            HistoryDateUtils.get_history_range()
-        )
+        _, to_date = HistoryDateUtils.get_history_range()
 
         return HistoryClient.get_candles(
             exchange=exchange,

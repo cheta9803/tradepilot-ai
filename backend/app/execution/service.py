@@ -1,3 +1,6 @@
+
+from app.core.config import settings
+from app.core.logger import logger
 from app.core.market_session import MarketSession
 from app.execution.eod import EndOfDayService
 from app.execution.order_service import ExecutionOrderService
@@ -132,6 +135,32 @@ class ExecutionService:
             trade.get("execution_mode") == "LIVE"
             and trade.get("order_status") == "FAILED"
         ):
+            return
+
+        #
+        # Live broker execution must be explicitly enabled.
+        #
+        if (
+            not settings.paper_trading
+            and not settings.live_trading_enabled
+        ):
+            logger.warning(
+                "Live trading disabled. "
+                "Blocking entry for %s %s.",
+                trade["symbol"],
+                trade["timeframe"],
+            )
+
+            TradeLifecycle.update(
+                exchange=trade["exchange"],
+                token=trade["token"],
+                timeframe=trade["timeframe"],
+                values={
+                    "state": "EXECUTION_BLOCKED",
+                    "reason": "LIVE_TRADING_DISABLED",
+                },
+            )
+
             return
 
         signal = trade["signal"]

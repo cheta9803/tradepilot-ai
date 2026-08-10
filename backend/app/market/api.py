@@ -28,11 +28,17 @@ async def history(
     timeframe: str = Query(default="5m"),
     limit: int = Query(default=20, ge=1, le=500),
 ):
-    candles = service.get_history(
-        symbol=symbol.upper(),
-        timeframe=timeframe,
-        limit=limit,
-    )
+    try:
+        candles = service.get_history(
+            symbol=symbol.upper(),
+            timeframe=timeframe,
+            limit=limit,
+        )
+    except AngelAPIException as exc:
+        raise HTTPException(
+            status_code=429,
+            detail=str(exc),
+        ) from exc
 
     return [
         CandleResponse(

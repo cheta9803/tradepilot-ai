@@ -191,7 +191,7 @@ class LiveManager:
 
         self.client.mark_connected()
 
-        WatchlistStartup.subscribe_all()
+        WatchlistStartup.subscribe_all(load_history=True)
 
     def on_close(
         self,

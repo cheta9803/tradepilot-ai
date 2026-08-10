@@ -1,6 +1,5 @@
 from app.core.market_session import MarketSession
-from app.history.loader import HistoryLoader
-from app.history.rebuilder import HistoryRebuilder
+from app.indicators.engine import IndicatorEngine
 from app.history.redis_cache import HistoryCache
 from app.indicators.cache import IndicatorCache
 from app.instruments.cache import InstrumentCache
@@ -22,25 +21,35 @@ class StrategyService:
         timeframe: str,
     ) -> dict | None:
 
+        candles = HistoryCache.get(
+            exchange=exchange,
+            token=token,
+            timeframe=timeframe,
+        )
+
+        latest_timestamp = (
+            candles[-1].timestamp.isoformat()
+            if candles
+            else None
+        )
+
         indicators = IndicatorCache.get(
             exchange=exchange,
             token=token,
             timeframe=timeframe,
         )
 
-        if indicators is not None:
+        if (
+            indicators is not None
+            and latest_timestamp is not None
+            and indicators.get("candle_timestamp") == latest_timestamp
+        ):
             return indicators
 
-        #
-        # Bootstrap historical data lazily for the requested
-        # symbol instead of requiring a previous live tick.
-        #
-        HistoryLoader.load(
-            exchange=exchange,
-            token=token,
-        )
-
-        HistoryRebuilder.rebuild_symbol(
+        # The cached indicators may belong to an older session. Recalculate
+        # from the current history instead of combining stale indicators with
+        # today's live LTP. IndicatorEngine handles history warm-up when needed.
+        IndicatorEngine.calculate(
             symbol=symbol,
             timeframe=timeframe,
         )

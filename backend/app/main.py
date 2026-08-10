@@ -12,7 +12,7 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logger import logger
 from app.db.session import SessionLocal
 from app.execution.instance import execution_manager
-from app.history.rebuilder import HistoryRebuilder
+
 from app.instruments.cache import InstrumentCache
 from app.live.instance import live_manager
 from app.startup.recovery import StartupRecovery
@@ -21,19 +21,47 @@ from app.websocket.router import router as websocket_router
 from app.paper_trading.api import router as paper_trading_router
 
 
+async def _start_live_manager() -> None:
+    """
+    Start the live manager without blocking FastAPI startup.
+
+    live_manager.start() performs watchlist/history initialization,
+    which can involve Angel One historical API calls and rate limiting.
+    Running it in a worker thread allows the API to become available
+    immediately.
+    """
+    try:
+        await asyncio.to_thread(
+            live_manager.start,
+        )
+
+        logger.info(
+            "Live manager background initialization completed.",
+        )
+
+    except Exception as exc:
+        logger.warning(
+            "Live manager background initialization failed: %s",
+            exc,
+        )
+
+
 @asynccontextmanager
 async def lifespan(
     app: FastAPI,
 ):
-
     websocket_manager.set_loop(
         asyncio.get_running_loop(),
     )
 
     try:
         InstrumentCache.load()
+
     except Exception as exc:
-        logger.warning("Instrument cache initialization failed: %s", exc)
+        logger.warning(
+            "Instrument cache initialization failed: %s",
+            exc,
+        )
 
     db = SessionLocal()
 
@@ -42,20 +70,23 @@ async def lifespan(
             CandleHistoryLoader.load(
                 db,
             )
-        except Exception as exc:
-            logger.warning("Candle history initialization failed: %s", exc)
 
-        try:
-            HistoryRebuilder.rebuild()
         except Exception as exc:
-            logger.warning("History rebuild failed: %s", exc)
+            logger.warning(
+                "Candle history initialization failed: %s",
+                exc,
+            )
 
     finally:
         db.close()
 
     try:
         AngelClient.login()
-        logger.info("Angel client initialized successfully.")
+
+        logger.info(
+            "Angel client initialized successfully.",
+        )
+
     except Exception as exc:
         logger.warning(
             "Angel client initialization failed during startup: %s",
@@ -64,6 +95,7 @@ async def lifespan(
 
     try:
         StartupRecovery.recover()
+
     except Exception as exc:
         logger.warning(
             "Startup recovery failed: %s",
@@ -72,28 +104,40 @@ async def lifespan(
 
     try:
         execution_manager.start()
+
     except Exception as exc:
         logger.warning(
             "Execution manager failed to start: %s",
             exc,
         )
 
-    try:
-        live_manager.start()
-    except Exception as exc:
-        logger.warning(
-            "Live manager failed to start: %s",
-            exc,
-        )
-
-    logger.info(
-        "TradePilot AI started",
+    # ---------------------------------------------------------
+    # IMPORTANT:
+    #
+    # live_manager.start() performs potentially heavy history
+    # loading for the watchlist/Nifty universe.
+    #
+    # Do NOT block FastAPI startup on this operation.
+    # ---------------------------------------------------------
+    live_manager_task = asyncio.create_task(
+        _start_live_manager(),
     )
 
+    logger.info(
+        "TradePilot AI started. "
+        "Live manager initialization is running in background.",
+    )
+
+    # FastAPI becomes ready here.
     yield
+
+    # ---------------------------------------------------------
+    # Shutdown
+    # ---------------------------------------------------------
 
     try:
         execution_manager.stop()
+
     except Exception as exc:
         logger.warning(
             "Execution manager shutdown failed: %s",
@@ -102,11 +146,24 @@ async def lifespan(
 
     try:
         live_manager.stop()
+
     except Exception as exc:
         logger.warning(
             "Live manager shutdown failed: %s",
             exc,
         )
+
+    # The live manager normally finishes its own background
+    # initialization. Cancel only the asyncio wrapper if it is
+    # still pending during application shutdown.
+    if not live_manager_task.done():
+        live_manager_task.cancel()
+
+        try:
+            await live_manager_task
+
+        except asyncio.CancelledError:
+            pass
 
     logger.info(
         "TradePilot AI stopped",

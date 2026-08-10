@@ -4,6 +4,7 @@ from app.core.market_session import MarketSession
 from app.indicators.cache import IndicatorCache
 from app.instruments.cache import InstrumentCache
 from app.live.redis_cache import LiveCache
+from app.history.redis_cache import HistoryCache
 from app.pretrade.engine import PreTradeRiskEngine
 from app.strategy.cache import StrategyCache
 from app.strategy.position import PositionSizer
@@ -34,13 +35,35 @@ class StrategyEngine:
         if instrument is None:
             return
 
+        candles = HistoryCache.get(
+            exchange=exchange,
+            token=token,
+            timeframe=timeframe,
+        )
+
+        if not candles:
+            return
+
         indicators = IndicatorCache.get(
             exchange=exchange,
             token=token,
             timeframe=timeframe,
         )
 
-        if indicators is None:
+        latest_timestamp = candles[-1].timestamp.isoformat()
+
+        # Never use indicators calculated for an older candle series. This is
+        # especially important during startup when the DB may contain only a
+        # small historical cache and a previous indicator value.
+        if (
+            indicators is None
+            or indicators.get("candle_timestamp") != latest_timestamp
+        ):
+            print(
+                f"Skipping strategy for "
+                f"{instrument.symbol} {timeframe}. "
+                f"Indicators are not aligned with the latest candle."
+            )
             return
 
         live = LiveCache.get(
