@@ -1,5 +1,6 @@
 import {
     computed,
+    DestroyRef,
     effect,
     inject,
     Injectable,
@@ -7,6 +8,8 @@ import {
 } from '@angular/core';
 
 import { MarketStore } from '../../../core/realtime/services/market.store';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { interval } from 'rxjs';
 import { DashboardApi } from '../api/dashboard-api';
 import {
     AiOpportunity,
@@ -27,6 +30,10 @@ export class DashboardService {
 
     private readonly dashboardApi = inject(
         DashboardApi,
+    );
+
+    private readonly destroyRef = inject(
+        DestroyRef,
     );
 
     private readonly marketStore = inject(
@@ -89,9 +96,31 @@ export class DashboardService {
 
         });
 
+        // Refresh dashboard recommendations automatically during
+        // the NSE trading session. The first load is still triggered
+        // by the Dashboard component.
+        interval(30_000)
+            .pipe(
+                takeUntilDestroyed(this.destroyRef),
+            )
+            .subscribe(() => {
+
+                if (this.isTradingHours()) {
+                    this.refreshRecommendations();
+                }
+
+            });
+
     }
 
     load(): void {
+
+        this.loadDashboard();
+        this.refreshRecommendations();
+
+    }
+
+    private loadDashboard(): void {
 
         this.dashboardApi
             .getDashboard()
@@ -128,6 +157,10 @@ export class DashboardService {
 
             });
 
+    }
+
+    private refreshRecommendations(): void {
+
         this.dashboardApi
             .getTopScanner(5)
             .subscribe({
@@ -147,7 +180,6 @@ export class DashboardService {
                         error,
                     );
 
-                    this._scannerOpportunities.set([]);
                 },
 
             });
@@ -171,10 +203,28 @@ export class DashboardService {
                         error,
                     );
 
-                    this._aiOpportunities.set([]);
                 },
 
             });
+
+    }
+
+    private isTradingHours(): boolean {
+
+        const now = new Date();
+        const day = now.getDay();
+
+        // NSE regular session: Monday-Friday, 09:15-15:30 IST.
+        if (day === 0 || day === 6) {
+            return false;
+        }
+
+        const minutes =
+            now.getHours() * 60 +
+            now.getMinutes();
+
+        return minutes >= 9 * 60 + 15
+            && minutes < 15 * 60 + 30;
 
     }
 

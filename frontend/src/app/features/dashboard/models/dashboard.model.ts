@@ -56,6 +56,9 @@ export interface ScannerOpportunity {
 
   recommendations_available?: boolean;
 
+  trade_ready?: boolean;
+  direction?: string;
+
   entry?: number;
   stop_loss?: number;
   target?: number;
@@ -84,6 +87,11 @@ export interface AiOpportunity {
   indicators?: Record<string, unknown>;
   strategy?: Record<string, unknown>;
   patterns?: Record<string, unknown>;
+
+  timeframes?: Record<string, string>;
+  timeframe_confidences?: Record<string, number>;
+  trade_ready?: boolean;
+  direction?: string;
 
   updated_at?: string;
   market_status?: string;

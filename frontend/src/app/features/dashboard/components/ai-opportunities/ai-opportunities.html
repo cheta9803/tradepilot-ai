@@ -1,155 +1,46 @@
 <app-section-card title="AI Opportunities">
-
     @if (dashboard.aiOpportunities().length === 0) {
-
-    <div class="empty-state">
-
-        <div class="empty-title">
-            No AI opportunities
+        <div class="empty-state">
+            <div class="empty-title">No AI opportunities</div>
+            <div class="empty-message">AI analysis is currently unavailable.</div>
         </div>
-
-        <div class="empty-message">
-            AI analysis is currently unavailable.
-        </div>
-
-    </div>
-
     } @else {
-
-    <div class="ai-list">
-
-        <div class="ai-context">
-
-            <div class="context-title">
-                Last available AI analysis
-            </div>
-
-            <div class="context-message">
-                AI opportunities are based on the latest
-                available market data.
-            </div>
-
-        </div>
-
-        @for (
-        opportunity of dashboard.aiOpportunities();
-        track opportunity.symbol
-        ) {
-
-        <div class="ai-opportunity">
-
-            <div class="symbol-section">
-
-                <div class="symbol">
-                    {{ opportunity.symbol }}
-                </div>
-
-                @if (opportunity.exchange) {
-
-                <div class="exchange">
-                    {{ opportunity.exchange }}
-                </div>
-
-                }
-
-            </div>
-
-            <div class="signal-section">
-
-                <span class="signal" [class.buy]="
-                                opportunity.recommendation === 'BUY' ||
-                                opportunity.signal === 'BUY'
-                            " [class.sell]="
-                                opportunity.recommendation === 'SELL' ||
-                                opportunity.signal === 'SELL'
-                            " [class.hold]="
-                                opportunity.recommendation === 'HOLD' ||
-                                opportunity.signal === 'HOLD'
-                            ">
-                    {{
-                    opportunity.recommendation ||
-                    opportunity.signal ||
-                    'N/A'
-                    }}
-                </span>
-
-            </div>
-
-            <div class="score-section">
-
-                @if (
-                opportunity.score !== undefined
-                ) {
-
-                <div class="score">
-                    {{
-                    opportunity.score
-                    | number:'1.0-2'
-                    }}
-                </div>
-
-                <div class="score-label">
-                    AI Score
-                </div>
-
-                }
-
-            </div>
-
-            <div class="confidence-section">
-
-                @if (
-                opportunity.confidence !== undefined
-                ) {
-
-                <div class="confidence">
-                    {{ opportunity.confidence }}%
-                </div>
-
-                <div class="confidence-label">
-                    Confidence
-                </div>
-
-                }
-
-            </div>
-
-            @if (
-            opportunity.reasons &&
-            opportunity.reasons.length > 0
-            ) {
-
-            <div class="reasons-section">
-
-                <div class="reasons-title">
-                    Why
-                </div>
-
-                <div class="reasons">
-
-                    @for (
-                    reason of opportunity.reasons;
-                    track reason
-                    ) {
-
-                    <span class="reason">
-                        {{ reason }}
-                    </span>
-
+        <div class="table-scroll">
+            <table class="opportunity-table">
+                <thead><tr>
+                    <th>Stock</th><th>15m</th><th>5m</th><th>1m</th>
+                    <th>Setup</th><th>Confidence</th><th>Decision</th>
+                </tr></thead>
+                <tbody>
+                    @for (o of dashboard.aiOpportunities(); track o.symbol) {
+                        <tr class="opportunity-row" tabindex="0" role="button"
+                            [class.disabled-row]="!o.symbol"
+                            (click)="openDetails(o)"
+                            (keydown.enter)="openDetails(o)"
+                            (keydown.space)="openDetails(o); $event.preventDefault()">
+                            <td class="stock-cell">
+                                <div class="symbol">{{ o.symbol || 'N/A' }}</div>
+                                @if (o.exchange) { <div class="exchange">{{ o.exchange }}</div> }
+                            </td>
+                            @for (tf of ['15m', '5m', '1m']; track tf) {
+                                <td><span class="signal"
+                                    [class.buy]="timeframe(o, tf) === 'BUY'"
+                                    [class.sell]="timeframe(o, tf) === 'SELL'"
+                                    [class.hold]="timeframe(o, tf) === 'HOLD'">
+                                    <span class="signal-dot"></span>{{ timeframe(o, tf) }}
+                                </span></td>
+                            }
+                            <td><span class="setup"
+                                [class.strong]="setup(o) === 'Strong'"
+                                [class.good]="setup(o) === 'Good'"
+                                [class.medium]="setup(o) === 'Medium'"
+                                [class.conflict]="setup(o) === 'Conflict'">{{ setup(o) }}</span></td>
+                            <td><span class="confidence">{{ o.confidence ?? 0 }}%</span></td>
+                            <td><span class="decision" [class.trade]="decision(o) === 'TRADE'">{{ decision(o) }}</span></td>
+                        </tr>
                     }
-
-                </div>
-
-            </div>
-
-            }
-
+                </tbody>
+            </table>
         </div>
-
-        }
-
-    </div>
-
     }
-
 </app-section-card>
