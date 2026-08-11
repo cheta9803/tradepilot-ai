@@ -1,7 +1,9 @@
 from datetime import datetime
 
 from app.candles.builder import CandleBuilder
+from app.candles.repository import CandleRepository
 from app.core.logger import logger
+from app.db.session import SessionLocal
 from app.history.redis_cache import HistoryCache
 from app.history.service import HistoryService
 from app.instruments.cache import InstrumentCache
@@ -11,9 +13,8 @@ class HistoryLoader:
 
     TIMEFRAME = "1m"
 
-    # 3,000 one-minute candles provide enough source data for 50 completed
-    # 1-hour candles, which is the largest timeframe currently used by the
-    # indicator/strategy pipeline.
+    # 3,000 one-minute candles provide enough source data
+    # for the higher-timeframe indicator/strategy pipeline.
     MIN_WARMUP_CANDLES = 3000
 
     @staticmethod
@@ -24,7 +25,10 @@ class HistoryLoader:
         refresh: bool = False,
     ) -> None:
 
-        instrument = InstrumentCache.get_by_token(token)
+        instrument = InstrumentCache.get_by_token(
+            token
+        )
+
         if instrument is None:
             return
 
@@ -47,25 +51,29 @@ class HistoryLoader:
             latest,
         )
 
-        # A small DB cache is not sufficient for higher-timeframe indicators.
-        # Fetch the full warm-up range instead of only requesting today's tail.
         needs_warmup = (
             refresh
             or latest is None
-            or len(existing) < HistoryLoader.MIN_WARMUP_CANDLES
+            or len(existing)
+            < HistoryLoader.MIN_WARMUP_CANDLES
         )
 
         if needs_warmup:
+
             logger.info(
-                "%s: history warm-up required. Cached 1m candles: %d",
+                "%s: history warm-up required. "
+                "Cached 1m candles: %d",
                 instrument.symbol,
                 len(existing),
             )
+
             history = HistoryService.get_warmup(
                 exchange=exchange,
                 token=token,
             )
+
         else:
+
             history = HistoryService.get_since(
                 exchange=exchange,
                 token=token,
@@ -76,17 +84,26 @@ class HistoryLoader:
                 history = history[1:]
 
         if not history:
+
+            logger.info(
+                "%s: no new historical candles received.",
+                instrument.symbol,
+            )
+
             return
 
-        candles = []
+        candles: list = []
 
         for row in history:
+
             candle = CandleBuilder.create(
                 exchange=exchange,
                 symbol=instrument.symbol,
                 token=token,
                 timeframe=HistoryLoader.TIMEFRAME,
-                timestamp=datetime.fromisoformat(row[0]).replace(
+                timestamp=datetime.fromisoformat(
+                    row[0]
+                ).replace(
                     second=0,
                     microsecond=0,
                 ),
@@ -98,10 +115,16 @@ class HistoryLoader:
             candle.high = float(row[2])
             candle.low = float(row[3])
             candle.close = float(row[4])
+
             candles.append(candle)
 
         if not candles:
+
             return
+
+        # ---------------------------------------------------------
+        # Merge fetched history with existing Redis history.
+        # ---------------------------------------------------------
 
         by_timestamp = {
             candle.timestamp: candle
@@ -109,12 +132,19 @@ class HistoryLoader:
         }
 
         for candle in candles:
-            by_timestamp[candle.timestamp] = candle
+
+            by_timestamp[
+                candle.timestamp
+            ] = candle
 
         merged = sorted(
             by_timestamp.values(),
             key=lambda candle: candle.timestamp,
         )
+
+        # ---------------------------------------------------------
+        # Save the complete merged history to Redis.
+        # ---------------------------------------------------------
 
         HistoryCache.save(
             exchange=exchange,
@@ -123,8 +153,37 @@ class HistoryLoader:
             candles=merged,
         )
 
+        # ---------------------------------------------------------
+        # IMPORTANT:
+        #
+        # Persist historical candles permanently.
+        #
+        # Previously historical API data was saved only to Redis.
+        # After a restart the database therefore contained only
+        # candles generated during the current live session.
+        # ---------------------------------------------------------
+
+        db = SessionLocal()
+
+        try:
+
+            CandleRepository.save_many(
+                db=db,
+                candles=candles,
+            )
+
+        finally:
+
+            db.close()
+
         logger.info(
             "%s: history cache now contains %d 1m candles",
             instrument.symbol,
             len(merged),
+        )
+
+        logger.info(
+            "%s: persisted %d historical 1m candles.",
+            instrument.symbol,
+            len(candles),
         )

@@ -181,6 +181,25 @@ class ScannerService:
             score=score,
             confidence=confidence,
             recommendation=recommendation,
+            direction=ai_score.get(
+                "direction",
+                "NONE",
+            ),
+            trade_ready=bool(
+                ai_score.get(
+                    "trade_ready",
+                    False,
+                )
+            ),
+            entry=ai_score.get("entry"),
+            stop_loss=ai_score.get("stop_loss"),
+            target=ai_score.get("target"),
+            risk_reward=float(
+                ai_score.get(
+                    "risk_reward",
+                    strategy.get("risk_reward", 0.0),
+                )
+            ),
             reasons=reasons,
             indicators=indicators,
             timeframes=timeframes,

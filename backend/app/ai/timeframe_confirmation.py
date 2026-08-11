@@ -1,14 +1,10 @@
-from app.strategy.cache import StrategyCache
+from app.strategy.multi_timeframe import MultiTimeframeStrategy
 
 
 class TimeframeConfirmation:
+    """Compatibility facade for the AI layer."""
 
-    TIMEFRAMES = [
-        "1m",
-        "5m",
-        "15m",
-        "1h",
-    ]
+    TIMEFRAMES = list(MultiTimeframeStrategy.TIMEFRAMES)
 
     @classmethod
     def calculate(
@@ -17,57 +13,28 @@ class TimeframeConfirmation:
         exchange: str,
         token: str,
     ) -> dict:
+        decision = MultiTimeframeStrategy.calculate(
+            exchange=exchange,
+            token=token,
+        )
 
-        signals = {}
-
-        buy = 0
-        sell = 0
-        hold = 0
-
-        for timeframe in cls.TIMEFRAMES:
-
-            strategy = StrategyCache.get(
-                exchange=exchange,
-                token=token,
-                timeframe=timeframe,
-            )
-
-            if strategy is None:
-
-                signals[timeframe] = "UNKNOWN"
-                continue
-
-            signal = strategy["signal"]
-
-            signals[timeframe] = signal
-
-            if signal == "BUY":
-                buy += 1
-
-            elif signal == "SELL":
-                sell += 1
-
-            else:
-                hold += 1
-
-        #
-        # Only count available timeframes
-        #
-        available = buy + sell + hold
-
-        confirmation = 0
-
-        if available > 0:
-
-            confirmation = round(
-                (max(buy, sell) / available) * 100
-            )
+        signals = decision["signals"]
+        buy = sum(1 for signal in signals.values() if signal == "BUY")
+        sell = sum(1 for signal in signals.values() if signal == "SELL")
+        hold = sum(
+            1
+            for signal in signals.values()
+            if signal not in ("BUY", "SELL", "UNKNOWN")
+        )
+        available = sum(
+            1 for signal in signals.values() if signal != "UNKNOWN"
+        )
 
         return {
-            "signals": signals,
+            **decision,
             "buy": buy,
             "sell": sell,
             "hold": hold,
             "available": available,
-            "confirmation": confirmation,
+            "confirmation": decision["confidence"] if decision["trade_ready"] else 0,
         }

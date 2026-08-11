@@ -1,30 +1,9 @@
-import json
-
 from app.ai.scorer import AIScorer
-
-
-class TimeframeConfirmation:
-    @staticmethod
-    def calculate(*args, **kwargs):
-        from app.ai.timeframe_confirmation import TimeframeConfirmation as RealTimeframeConfirmation
-
-        return RealTimeframeConfirmation.calculate(*args, **kwargs)
-
-
-class PatternCache:
-    @staticmethod
-    def get(*args, **kwargs):
-        from app.patterns.cache import PatternCache as RealPatternCache
-
-        return RealPatternCache.get(*args, **kwargs)
-
-
-class StrategyCache:
-    @staticmethod
-    def get(*args, **kwargs):
-        from app.strategy.cache import StrategyCache as RealStrategyCache
-
-        return RealStrategyCache.get(*args, **kwargs)
+from app.db.redis import redis_client
+from app.instruments.cache import InstrumentCache
+from app.ai.timeframe_confirmation import TimeframeConfirmation
+from app.patterns.cache import PatternCache
+from app.strategy.cache import StrategyCache
 
 
 class AIService:
@@ -36,40 +15,44 @@ class AIService:
         timeframe: str = "1m",
         limit: int = 10,
     ) -> list[dict]:
+        opportunities: list[dict] = []
+        seen: set[tuple[str, str]] = set()
 
-        from app.db.redis import redis_client
-        from app.instruments.cache import InstrumentCache
-
-        opportunities = []
-
-        for key in redis_client.scan_iter(match="strategy:*"):
-
+        for key in redis_client.scan_iter(match="strategy:*:1m"):
             if isinstance(key, bytes):
                 key = key.decode()
 
-            _, exchange, token, strategy_timeframe = key.split(":")
+            parts = key.split(":")
+            if len(parts) != 4:
+                continue
+
+            _, exchange, token, strategy_timeframe = parts
 
             if strategy_timeframe != timeframe:
                 continue
 
+            identity = (exchange, token)
+            if identity in seen:
+                continue
+            seen.add(identity)
+
             strategy = StrategyCache.get(
                 exchange=exchange,
                 token=token,
-                timeframe=strategy_timeframe,
+                timeframe="1m",
             )
-
             if strategy is None:
                 continue
-
-            patterns = PatternCache.get(
-                exchange=exchange,
-                token=token,
-                timeframe=strategy_timeframe,
-            )
 
             confirmation = TimeframeConfirmation.calculate(
                 exchange=exchange,
                 token=token,
+            )
+
+            patterns = PatternCache.get(
+                exchange=exchange,
+                token=token,
+                timeframe="1m",
             )
 
             score = AIScorer.calculate(
@@ -77,23 +60,43 @@ class AIService:
                 patterns=patterns,
             )
 
-            if confirmation["confirmation"] >= 75:
-                score["score"] = min(score["score"] + 10, 100)
-                score["confidence"] = score["score"]
-                score["reasons"].append(
-                    f"Multi-timeframe confirmation ({confirmation['confirmation']}%)"
-                )
-            elif confirmation["confirmation"] < 40:
-                score["score"] = max(score["score"] - 10, 0)
-                score["confidence"] = score["score"]
-                score["reasons"].append(
-                    f"Weak multi-timeframe confirmation ({confirmation['confirmation']}%)"
-                )
+            master_ready = confirmation["trade_ready"]
+            master_signal = confirmation["signal"]
 
+            if master_ready:
+                # Once all timeframes are aligned, the MTF confidence is the
+                # final trade confidence.
+                score["recommendation"] = master_signal
+                score["confidence"] = confirmation["confidence"]
+                score["score"] = confirmation["confidence"]
+            else:
+                # MTF confirmation is a trade-readiness gate. A WAIT result
+                # must not erase the useful underlying 1m AI score.
+                # TimeframeConfirmation returns confidence=0 while waiting,
+                # which previously caused every WAIT opportunity to display
+                # 0 score / 0 confidence.
+                score["recommendation"] = "WAIT"
+
+            score["reasons"].extend(
+                confirmation["reasons"]
+            )
+
+            score["direction"] = (
+                master_signal
+                if master_ready
+                else "NONE"
+            )
+            score["trade_ready"] = master_ready
             score["timeframes"] = confirmation["signals"]
+            score["timeframe_confidences"] = confirmation[
+                "confidences"
+            ]
+            score["entry"] = confirmation["entry"]
+            score["stop_loss"] = confirmation["stop_loss"]
+            score["target"] = confirmation["target"]
+            score["risk_reward"] = confirmation["risk_reward"]
 
             instrument = InstrumentCache.get_by_token(token=token)
-
             if instrument is None:
                 continue
 
@@ -107,22 +110,15 @@ class AIService:
             )
 
         opportunities.sort(
-            key=lambda x: (
-                x.get("recommendation") == "NO SIGNAL",
-                x.get("confidence", 0),
-                x.get("score", 0),
-                x.get("recommendation") != "BUY",
-                x.get("recommendation") != "WATCH",
-            ),
-            reverse=False,
+            key=lambda item: (
+                not item.get("trade_ready", False),
+                -item.get("confidence", 0),
+                -item.get("score", 0),
+            )
         )
 
-        meaningful = [
-            item for item in opportunities if item.get("recommendation") != "NO SIGNAL"
-        ]
-
-        if meaningful:
-            return meaningful[:limit]
+        if opportunities:
+            return opportunities[:limit]
 
         return [
             {
@@ -132,7 +128,9 @@ class AIService:
                 "score": 0,
                 "confidence": 0,
                 "recommendation": "NO SIGNAL",
-                "reasons": ["No strong signal available"],
+                "direction": "NONE",
+                "trade_ready": False,
+                "reasons": ["No strategy data available"],
                 "timeframes": {},
             }
         ]

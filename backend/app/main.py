@@ -4,7 +4,6 @@ import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.angel.client import AngelClient
 from app.api.router import api_router
 from app.candles.history_loader import CandleHistoryLoader
 from app.core.config import settings
@@ -12,25 +11,29 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logger import logger
 from app.db.session import SessionLocal
 from app.execution.instance import execution_manager
-
 from app.instruments.cache import InstrumentCache
 from app.live.instance import live_manager
+from app.paper_trading.api import router as paper_trading_router
 from app.startup.recovery import StartupRecovery
 from app.websocket.manager import websocket_manager
 from app.websocket.router import router as websocket_router
-from app.paper_trading.api import router as paper_trading_router
 
 
 async def _start_live_manager() -> None:
     """
     Start the live manager without blocking FastAPI startup.
 
-    live_manager.start() performs watchlist/history initialization,
-    which can involve Angel One historical API calls and rate limiting.
-    Running it in a worker thread allows the API to become available
-    immediately.
+    LiveManager is responsible for:
+        1. Angel One authentication.
+        2. Angel WebSocket initialization.
+        3. Live market subscriptions.
+        4. Background historical warm-up.
+
+    Historical warm-up must not block FastAPI startup.
     """
+
     try:
+
         await asyncio.to_thread(
             live_manager.start,
         )
@@ -40,7 +43,8 @@ async def _start_live_manager() -> None:
         )
 
     except Exception as exc:
-        logger.warning(
+
+        logger.exception(
             "Live manager background initialization failed: %s",
             exc,
         )
@@ -50,75 +54,108 @@ async def _start_live_manager() -> None:
 async def lifespan(
     app: FastAPI,
 ):
+
+    # ---------------------------------------------------------
+    # Register the FastAPI event loop.
+    #
+    # Angel WebSocket runs on a separate thread and uses this
+    # loop to broadcast market ticks to the frontend.
+    # ---------------------------------------------------------
+
     websocket_manager.set_loop(
         asyncio.get_running_loop(),
     )
 
+    # ---------------------------------------------------------
+    # Load instrument master/cache.
+    # ---------------------------------------------------------
+
     try:
+
         InstrumentCache.load()
 
     except Exception as exc:
+
         logger.warning(
             "Instrument cache initialization failed: %s",
             exc,
         )
 
+    # ---------------------------------------------------------
+    # Load locally persisted candle history.
+    #
+    # This is DB/cache initialization only.
+    # Angel historical API is NOT called here.
+    # ---------------------------------------------------------
+
     db = SessionLocal()
 
     try:
+
         try:
+
             CandleHistoryLoader.load(
                 db,
             )
 
         except Exception as exc:
+
             logger.warning(
                 "Candle history initialization failed: %s",
                 exc,
             )
 
     finally:
+
         db.close()
 
-    try:
-        AngelClient.login()
-
-        logger.info(
-            "Angel client initialized successfully.",
-        )
-
-    except Exception as exc:
-        logger.warning(
-            "Angel client initialization failed during startup: %s",
-            exc,
-        )
+    # ---------------------------------------------------------
+    # Startup recovery.
+    # ---------------------------------------------------------
 
     try:
+
         StartupRecovery.recover()
 
     except Exception as exc:
+
         logger.warning(
             "Startup recovery failed: %s",
             exc,
         )
 
+    # ---------------------------------------------------------
+    # Start execution manager.
+    # ---------------------------------------------------------
+
     try:
+
         execution_manager.start()
 
     except Exception as exc:
+
         logger.warning(
             "Execution manager failed to start: %s",
             exc,
         )
 
     # ---------------------------------------------------------
-    # IMPORTANT:
+    # IMPORTANT
     #
-    # live_manager.start() performs potentially heavy history
-    # loading for the watchlist/Nifty universe.
+    # Do NOT call:
     #
-    # Do NOT block FastAPI startup on this operation.
+    #     AngelClient.login()
+    #
+    # here.
+    #
+    # LiveManager -> LiveClient -> AngelClient.get_client()
+    # handles broker authentication.
+    #
+    # Starting the live manager in a background thread also
+    # prevents broker connection/history initialization from
+    # blocking FastAPI startup.
     # ---------------------------------------------------------
+
     live_manager_task = asyncio.create_task(
         _start_live_manager(),
     )
@@ -128,41 +165,55 @@ async def lifespan(
         "Live manager initialization is running in background.",
     )
 
-    # FastAPI becomes ready here.
+    # ---------------------------------------------------------
+    # FastAPI is now ready.
+    # Frontend can connect to /ws/market.
+    # ---------------------------------------------------------
+
     yield
 
-    # ---------------------------------------------------------
-    # Shutdown
-    # ---------------------------------------------------------
+    # =========================================================
+    # SHUTDOWN
+    # =========================================================
 
     try:
+
         execution_manager.stop()
 
     except Exception as exc:
+
         logger.warning(
             "Execution manager shutdown failed: %s",
             exc,
         )
 
     try:
+
         live_manager.stop()
 
     except Exception as exc:
+
         logger.warning(
             "Live manager shutdown failed: %s",
             exc,
         )
 
-    # The live manager normally finishes its own background
-    # initialization. Cancel only the asyncio wrapper if it is
-    # still pending during application shutdown.
+    # ---------------------------------------------------------
+    # Cancel the asyncio wrapper if it is still waiting.
+    #
+    # The actual LiveManager worker thread is daemonized.
+    # ---------------------------------------------------------
+
     if not live_manager_task.done():
+
         live_manager_task.cancel()
 
         try:
+
             await live_manager_task
 
         except asyncio.CancelledError:
+
             pass
 
     logger.info(

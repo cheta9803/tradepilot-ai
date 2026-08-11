@@ -58,6 +58,18 @@ class ScannerResult:
 
     recommendation: str
 
+    direction: str = "NONE"
+
+    trade_ready: bool = False
+
+    entry: float | None = None
+
+    stop_loss: float | None = None
+
+    target: float | None = None
+
+    risk_reward: float = 0.0
+
     reasons: list[str] = field(
         default_factory=list,
     )

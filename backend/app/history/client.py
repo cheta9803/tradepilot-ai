@@ -9,15 +9,19 @@ class HistoryClient:
 
     _lock = Lock()
 
-    # Keep historical API traffic deliberately conservative.
+    # ---------------------------------------------------------
+    # Historical API throttling
     #
-    # Angel documents getCandleData at 3 requests/second and
-    # 180 requests/minute. We intentionally use 1 request/second
-    # to avoid bursts while loading the Nifty universe.
+    # Angel historical API should not be hit aggressively.
+    #
+    # We intentionally stay conservative because the history
+    # loader can request data for the entire Nifty universe.
+    # ---------------------------------------------------------
+
     MIN_INTERVAL_SECONDS = 1.0
 
-    # If Angel returns AB1021, stop making historical requests
-    # for a while instead of immediately retrying.
+    # After Angel returns a rate-limit response, stop making
+    # historical requests for this cooldown period.
     RATE_LIMIT_COOLDOWN_SECONDS = 30.0
 
     _last_request_at = 0.0
@@ -25,27 +29,44 @@ class HistoryClient:
 
     @classmethod
     def _wait_for_rate_limit(cls) -> None:
-        with cls._lock:
+        """
+        Wait until the next historical API request is allowed.
 
-            now = monotonic()
+        Important:
+        Never hold _lock while sleeping.
+        """
 
-            next_allowed_at = max(
-                cls._last_request_at
-                + cls.MIN_INTERVAL_SECONDS,
-                cls._rate_limited_until,
-            )
+        while True:
 
-            wait = next_allowed_at - now
+            with cls._lock:
 
-            if wait > 0:
-                logger.debug(
-                    "Historical API throttling: waiting %.2f seconds.",
-                    wait,
+                now = monotonic()
+
+                next_allowed_at = max(
+                    cls._last_request_at
+                    + cls.MIN_INTERVAL_SECONDS,
+                    cls._rate_limited_until,
                 )
 
-                sleep(wait)
+                wait = (
+                    next_allowed_at
+                    - now
+                )
 
-            cls._last_request_at = monotonic()
+                if wait <= 0:
+
+                    # Reserve this request slot.
+                    cls._last_request_at = monotonic()
+
+                    return
+
+            logger.debug(
+                "Historical API throttling: "
+                "waiting %.2f seconds.",
+                wait,
+            )
+
+            sleep(wait)
 
     @staticmethod
     def _is_rate_limit_error(
@@ -62,6 +83,20 @@ class HistoryClient:
         )
 
     @classmethod
+    def _set_rate_limit_cooldown(cls) -> None:
+        """
+        Globally pause historical requests after Angel
+        reports a rate-limit violation.
+        """
+
+        with cls._lock:
+
+            cls._rate_limited_until = (
+                monotonic()
+                + cls.RATE_LIMIT_COOLDOWN_SECONDS
+            )
+
+    @classmethod
     def get_candles(
         cls,
         *,
@@ -72,9 +107,13 @@ class HistoryClient:
         to_date,
     ) -> list[dict]:
 
-        try:
+        # -----------------------------------------------------
+        # Wait before every request.
+        # -----------------------------------------------------
 
-            cls._wait_for_rate_limit()
+        cls._wait_for_rate_limit()
+
+        try:
 
             client = AngelClient.login()
 
@@ -96,17 +135,13 @@ class HistoryClient:
 
             if cls._is_rate_limit_error(exc):
 
-                with cls._lock:
-
-                    cls._rate_limited_until = (
-                        monotonic()
-                        + cls.RATE_LIMIT_COOLDOWN_SECONDS
-                    )
+                cls._set_rate_limit_cooldown()
 
                 logger.warning(
-                    "Angel historical API rate limit reached "
-                    "for %s/%s. "
-                    "Pausing historical requests for %.0f seconds.",
+                    "Angel historical API rate limit "
+                    "reached for %s/%s. "
+                    "Pausing historical requests "
+                    "for %.0f seconds.",
                     exchange,
                     symbol_token,
                     cls.RATE_LIMIT_COOLDOWN_SECONDS,
@@ -117,7 +152,8 @@ class HistoryClient:
                 ) from exc
 
             logger.debug(
-                "Historical candle fetch failed for %s/%s: %s",
+                "Historical candle fetch failed "
+                "for %s/%s: %s",
                 exchange,
                 symbol_token,
                 exc,
@@ -125,11 +161,18 @@ class HistoryClient:
 
             return []
 
-        if not response or not response.get("status"):
+        # -----------------------------------------------------
+        # Validate broker response.
+        # -----------------------------------------------------
+
+        if (
+            not response
+            or not response.get("status")
+        ):
 
             logger.debug(
-                "Historical candle fetch returned no data "
-                "for %s/%s: %s",
+                "Historical candle fetch returned "
+                "no data for %s/%s: %s",
                 exchange,
                 symbol_token,
                 (response or {}).get(
@@ -140,10 +183,14 @@ class HistoryClient:
 
             return []
 
-        rows = response.get("data") or []
+        rows = (
+            response.get("data")
+            or []
+        )
 
         logger.debug(
-            "History API returned %d candles for %s/%s",
+            "History API returned %d candles "
+            "for %s/%s",
             len(rows),
             exchange,
             symbol_token,

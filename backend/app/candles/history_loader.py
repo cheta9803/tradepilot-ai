@@ -1,11 +1,14 @@
 from sqlalchemy.orm import Session
 
-from app.history.redis_cache import HistoryCache
 from app.candles.repository import CandleRepository
+from app.core.logger import logger
+from app.history.redis_cache import HistoryCache
 
 
 class CandleHistoryLoader:
 
+    # Maximum number of candles retained per
+    # exchange/token/timeframe combination.
     LIMIT = 3000
 
     @staticmethod
@@ -13,48 +16,52 @@ class CandleHistoryLoader:
         db: Session,
     ) -> None:
 
-        candles = CandleRepository.load_recent(
+        grouped = CandleRepository.load_recent_grouped(
             db=db,
             limit=CandleHistoryLoader.LIMIT,
         )
 
-        grouped: dict[
-            tuple[str, str, str],
-            list,
-        ] = {}
+        if not grouped:
 
-        for candle in candles:
-
-            key = (
-                candle.exchange,
-                candle.token,
-                candle.timeframe,
+            logger.info(
+                "No persisted candle history found."
             )
 
-            grouped.setdefault(
-                key,
-                [],
-            ).append(candle)
+            return
+
+        total_groups = len(grouped)
+
+        logger.info(
+            "Loading persisted candle history "
+            "for %d instrument/timeframe groups.",
+            total_groups,
+        )
 
         for (
             exchange,
             token,
             timeframe,
-        ), candle_list in grouped.items():
+        ), candles in grouped.items():
 
-            candle_list.sort(
-                key=lambda candle: candle.timestamp,
-            )
+            if not candles:
+                continue
 
             HistoryCache.save(
                 exchange=exchange,
                 token=token,
                 timeframe=timeframe,
-                candles=candle_list,
+                candles=candles,
             )
 
-            print(
-                f"Loaded {len(candle_list)} "
-                f"historical candles "
-                f"for {exchange}:{token}:{timeframe}"
+            logger.info(
+                "Loaded %d historical candles "
+                "for %s:%s:%s",
+                len(candles),
+                exchange,
+                token,
+                timeframe,
             )
+
+        logger.info(
+            "Persisted candle history loading completed."
+        )

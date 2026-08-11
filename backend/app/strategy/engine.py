@@ -7,6 +7,7 @@ from app.live.redis_cache import LiveCache
 from app.history.redis_cache import HistoryCache
 from app.pretrade.engine import PreTradeRiskEngine
 from app.strategy.cache import StrategyCache
+from app.strategy.multi_timeframe import MultiTimeframeStrategy
 from app.strategy.position import PositionSizer
 from app.strategy.risk import RiskManager
 from app.strategy.rules import StrategyRules
@@ -169,57 +170,16 @@ class StrategyEngine:
             )
         )
 
-        position = PositionSizer.calculate(
-            capital=settings.default_capital,
-            entry=entry,
-            stop_loss=stop_loss,
-        )
-
-        #
-        # Always update strategy cache.
-        #
-        StrategyCache.save(
-            exchange=exchange,
-            token=token,
-            timeframe=timeframe,
-            values={
-                "exchange": instrument.exchange,
-                "token": instrument.token,
-                "symbol": instrument.symbol,
-                "timeframe": timeframe,
-                "trend": trend,
-                "state": state,
-                "signal": signal,
-                "confidence": confidence,
-                "tradable": (
-                    signal != StrategyRules.HOLD
-                ),
-                "entry": entry,
-                "stop_loss": stop_loss,
-                "target": target,
-                "risk_reward": 2.0,
-                "ema20": indicators["ema20"],
-                "ema50": indicators["ema50"],
-                "rsi14": indicators["rsi14"],
-                "atr14": indicators["atr14"],
-                "vwap": indicators["vwap"],
-                "macd": indicators["macd"],
-                "signal_line": indicators["signal"],
-                "supertrend": indicators["supertrend"],
-                "supertrend_signal": indicators[
-                    "supertrend_signal"
-                ],
-                "quantity": position["quantity"],
-                "invested": position["invested"],
-                "risk_amount": position["risk_amount"],
-                "reasons": reasons,
-            },
-        )
-
         patterns = PatternCache.get(
             exchange=exchange,
             token=token,
             timeframe=timeframe,
+        )
+
+        position = PositionSizer.calculate(
+            capital=settings.default_capital,
+            entry=entry,
+            stop_loss=stop_loss,
         )
 
         if patterns:
@@ -272,41 +232,98 @@ class StrategyEngine:
                     "Breakdown"
                 )
 
-        #
-        # No entry signal.
-        #
-        if state != TradeState.ENTRY_READY:
+        state = TradeState.evaluate(
+            trend=trend,
+            signal=signal,
+            confidence=confidence,
+        )
 
-            print(
-                f"Strategy updated "
-                f"{instrument.symbol} "
-                f"{timeframe}"
-            )
-
-            return
-
-        #
-        # Never create LIVE trades
-        # outside market hours.
-        #
-        if not MarketSession.can_enter_trade():
-
-            print(
-                f"Market closed. "
-                f"Skipping trade creation "
-                f"{instrument.symbol} "
-                f"{timeframe}"
-            )
-
-            return
-
-        #
-        # Existing active trade?
-        #
-        existing_trade = TradeCache.get(
+        # Pattern adjustments are part of the final strategy confidence.
+        # Persist them before the multi-timeframe decision reads this cache.
+        StrategyCache.save(
             exchange=exchange,
             token=token,
             timeframe=timeframe,
+            values={
+                "exchange": instrument.exchange,
+                "token": instrument.token,
+                "symbol": instrument.symbol,
+                "timeframe": timeframe,
+                "trend": trend,
+                "state": state,
+                "signal": signal,
+                "confidence": confidence,
+                "tradable": signal != StrategyRules.HOLD,
+                "entry": entry,
+                "stop_loss": stop_loss,
+                "target": target,
+                "risk_reward": 2.0,
+                "ema20": indicators["ema20"],
+                "ema50": indicators["ema50"],
+                "rsi14": indicators["rsi14"],
+                "atr14": indicators["atr14"],
+                "vwap": indicators["vwap"],
+                "macd": indicators["macd"],
+                "signal_line": indicators["signal"],
+                "supertrend": indicators["supertrend"],
+                "supertrend_signal": indicators["supertrend_signal"],
+                "quantity": position["quantity"],
+                "invested": position["invested"],
+                "risk_amount": position["risk_amount"],
+                "reasons": reasons,
+            },
+        )
+
+        #
+        # A timeframe strategy is analytical data only.
+        # One real intraday trade is created only by the 1m entry trigger
+        # after 15m bias + 5m setup + 1m trigger agree.
+        #
+        if timeframe != "1m":
+            print(
+                f"Strategy updated {instrument.symbol} {timeframe}; "
+                "no independent trade created."
+            )
+            return
+
+        master = MultiTimeframeStrategy.calculate(
+            exchange=exchange,
+            token=token,
+        )
+
+        if not master["trade_ready"]:
+            print(
+                f"Multi-timeframe WAIT "
+                f"{instrument.symbol}: "
+                f"{master['reasons'][0]}"
+            )
+            return
+
+        signal = master["signal"]
+        entry = float(master["entry"])
+        stop_loss = float(master["stop_loss"])
+        target = float(master["target"])
+
+        position = PositionSizer.calculate(
+            capital=settings.default_capital,
+            entry=entry,
+            stop_loss=stop_loss,
+        )
+
+        #
+        # Never create LIVE trades outside market hours.
+        #
+        if not MarketSession.can_enter_trade():
+            print(
+                f"Market closed. Skipping master trade creation "
+                f"{instrument.symbol} 1m"
+            )
+            return
+
+        existing_trade = TradeCache.get(
+            exchange=exchange,
+            token=token,
+            timeframe="1m",
         )
 
         if (
@@ -317,45 +334,26 @@ class StrategyEngine:
                 "SELL_ACTIVE",
             )
         ):
-
             print(
-                f"Trade already exists "
-                f"{instrument.symbol} "
-                f"{timeframe} "
+                f"Master trade already exists "
+                f"{instrument.symbol} 1m "
                 f"state={existing_trade['state']}"
             )
-
             return
 
-        #
-        # Risk checks.
-        #
         if not PreTradeRiskEngine.can_open_trade():
-
             print(
-                f"Risk check failed "
-                f"{instrument.symbol} "
-                f"{timeframe}"
+                f"Risk check failed {instrument.symbol} master 1m"
             )
-
             return
 
-        #
-        # Create trade.
-        #
-        # TradeLifecycle.create() will:
-        #
-        # - ignore active trades
-        # - replace completed trades
-        # - save the new trade
-        #
         TradeLifecycle.create(
             exchange=exchange,
             token=token,
             symbol=instrument.symbol,
-            timeframe=timeframe,
+            timeframe="1m",
             signal=signal,
-            state=state,
+            state=TradeState.ENTRY_READY,
             entry=entry,
             stop_loss=stop_loss,
             target=target,
@@ -364,7 +362,11 @@ class StrategyEngine:
         )
 
         print(
-            f"Created trade "
-            f"{instrument.symbol} "
-            f"{timeframe}"
+            f"Created master trade "
+            f"{instrument.symbol} 1m "
+            f"signal={signal} "
+            f"confidence={master['confidence']} "
+            f"entry={entry} "
+            f"stop={stop_loss} "
+            f"target={target}"
         )

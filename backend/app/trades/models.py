@@ -13,17 +13,19 @@ class Trade:
 
     timeframe: str
 
-    state: str
+    risk_timeframe: str = "1m"
 
-    signal: str
+    state: str = ""
 
-    entry_price: float
+    signal: str = ""
 
-    stop_loss: float
+    entry_price: float = 0.0
 
-    target: float
+    stop_loss: float = 0.0
 
-    quantity: int
+    target: float = 0.0
+
+    quantity: int = 0
 
     opened_at: str | None = None
 

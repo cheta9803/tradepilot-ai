@@ -1,3 +1,5 @@
+import threading
+
 from app.candles.service import CandleService
 from app.core.logger import logger
 from app.instruments.cache import InstrumentCache
@@ -17,6 +19,11 @@ class LiveManager:
         self.client = LiveClient()
 
         self.subscribed_tokens: set[str] = set()
+
+        # Historical warm-up must never block the Angel WebSocket
+        # callback thread.
+        self._history_thread: threading.Thread | None = None
+        self._history_lock = threading.Lock()
 
     def _attach_callbacks(self) -> None:
 
@@ -191,7 +198,85 @@ class LiveManager:
 
         self.client.mark_connected()
 
-        WatchlistStartup.subscribe_all(load_history=True)
+        # ---------------------------------------------------------
+        # IMPORTANT
+        #
+        # Subscribe to live market data FIRST.
+        #
+        # Do NOT call load_history=True here.
+        #
+        # The Angel WebSocket callback must remain lightweight.
+        # ---------------------------------------------------------
+
+        try:
+
+            WatchlistStartup.subscribe_all(
+                load_history=False,
+            )
+
+            logger.info(
+                "Live market subscriptions initialized.",
+            )
+
+        except Exception as exc:
+
+            logger.exception(
+                "Live market subscription initialization failed: %s",
+                exc,
+            )
+
+        # ---------------------------------------------------------
+        # Historical warm-up runs independently.
+        #
+        # This prevents historical API calls/rate limits from
+        # blocking live market ticks.
+        # ---------------------------------------------------------
+
+        self._start_history_background()
+
+    def _start_history_background(self) -> None:
+
+        with self._history_lock:
+
+            if (
+                self._history_thread is not None
+                and self._history_thread.is_alive()
+            ):
+
+                logger.info(
+                    "Historical warm-up is already running.",
+                )
+
+                return
+
+            self._history_thread = threading.Thread(
+                target=self._load_history_background,
+                name="HistoryWarmup",
+                daemon=True,
+            )
+
+            self._history_thread.start()
+
+        logger.info(
+            "Historical warm-up started in background.",
+        )
+
+    def _load_history_background(self) -> None:
+
+        try:
+
+            WatchlistStartup.load_history()
+
+            logger.info(
+                "Historical warm-up background task completed.",
+            )
+
+        except Exception as exc:
+
+            logger.exception(
+                "Historical warm-up background task failed: %s",
+                exc,
+            )
 
     def on_close(
         self,
@@ -203,6 +288,11 @@ class LiveManager:
         )
 
         self.client.mark_disconnected()
+
+        # The old broker connection is gone.
+        # Allow subscriptions to be sent again if the manager
+        # is initialized/reconnected later.
+        self.subscribed_tokens.clear()
 
     def on_error(
         self,

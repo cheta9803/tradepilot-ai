@@ -6,16 +6,24 @@ from app.history.loader import HistoryLoader
 
 class HistoryLoadQueue:
 
-    # HistoryClient already enforces the minimum request interval.
-    # Keep a small queue delay as an additional safety margin.
-    DELAY_SECONDS = 0.25
+    # Small spacing between successful instrument requests.
+    #
+    # HistoryClient also applies its own request throttling,
+    # so this is only an additional safety margin.
+    DELAY_SECONDS = 1.0
 
-    # Do not aggressively retry a rate-limited request.
-    MAX_RETRIES = 2
+    # Give a rate-limited instrument several opportunities.
+    #
+    # We deliberately keep this finite so one permanently
+    # failing instrument cannot block the entire queue forever.
+    MAX_RETRIES = 5
 
-    # Angel historical API cooldown is handled centrally by
-    # HistoryClient. This delay is only used between retries.
-    RETRY_DELAY_SECONDS = 30.0
+    # Wait between retries after a rate-limit response.
+    #
+    # HistoryClient already applies its own cooldown, so this
+    # queue-level delay prevents immediately hammering the API
+    # again after HistoryClient returns the rate-limit error.
+    RETRY_DELAY_SECONDS = 45.0
 
     @classmethod
     def load(
@@ -25,12 +33,27 @@ class HistoryLoadQueue:
 
         total = len(instruments)
 
+        if total == 0:
+
+            logger.info(
+                "Historical load queue skipped: "
+                "no instruments."
+            )
+
+            return
+
         logger.info(
             "Starting historical load queue for %d instruments.",
             total,
         )
 
-        for index, (exchange, token) in enumerate(
+        successful = 0
+        skipped = 0
+
+        for index, (
+            exchange,
+            token,
+        ) in enumerate(
             instruments,
             start=1,
         ):
@@ -58,27 +81,47 @@ class HistoryLoadQueue:
                     )
 
                     loaded = True
+
+                    successful += 1
+
+                    logger.info(
+                        "Historical load completed "
+                        "for %s:%s.",
+                        exchange,
+                        token,
+                    )
+
                     break
 
-                except ValueError as ex:
+                except ValueError as exc:
 
-                    if "Too many requests" not in str(ex):
+                    message = str(exc)
 
-                        logger.debug(
-                            "Failed to load history "
+                    # ---------------------------------------------
+                    # Rate limit
+                    # ---------------------------------------------
+
+                    if (
+                        "Too many requests"
+                        not in message
+                    ):
+
+                        logger.warning(
+                            "Historical load failed "
                             "for %s:%s: %s",
                             exchange,
                             token,
-                            ex,
+                            exc,
                         )
 
                         break
 
                     logger.warning(
-                        "Angel historical rate limit for "
-                        "%s:%s "
+                        "Angel historical rate limit "
+                        "for %s:%s "
                         "(attempt %d/%d). "
-                        "Waiting %.0f seconds before retry.",
+                        "Waiting %.0f seconds "
+                        "before retry.",
                         exchange,
                         token,
                         attempt,
@@ -92,19 +135,28 @@ class HistoryLoadQueue:
                             cls.RETRY_DELAY_SECONDS
                         )
 
-                    else:
+                        continue
 
-                        logger.warning(
-                            "Skipping historical load for "
-                            "%s:%s after rate-limit retries.",
-                            exchange,
-                            token,
-                        )
+                    # ---------------------------------------------
+                    # Retries exhausted
+                    # ---------------------------------------------
+
+                    skipped += 1
+
+                    logger.warning(
+                        "Skipping historical load for "
+                        "%s:%s after %d rate-limit attempts.",
+                        exchange,
+                        token,
+                        cls.MAX_RETRIES,
+                    )
 
                 except Exception as exc:
 
-                    logger.debug(
-                        "Failed to load history "
+                    skipped += 1
+
+                    logger.exception(
+                        "Historical load failed "
                         "for %s:%s: %s",
                         exchange,
                         token,
@@ -113,18 +165,20 @@ class HistoryLoadQueue:
 
                     break
 
-            if loaded:
+            # -----------------------------------------------------
+            # Spacing between instruments.
+            # -----------------------------------------------------
 
-                logger.debug(
-                    "Historical load completed for "
-                    "%s:%s.",
-                    exchange,
-                    token,
+            if index < total:
+
+                sleep(
+                    cls.DELAY_SECONDS
                 )
 
-            # Additional spacing between symbols.
-            sleep(cls.DELAY_SECONDS)
-
         logger.info(
-            "Historical load queue completed.",
+            "Historical load queue completed. "
+            "Successful=%d, Skipped=%d, Total=%d.",
+            successful,
+            skipped,
+            total,
         )
