@@ -20,3 +20,5 @@ dist/
 
 # Database
 *.db
+
+backend/.env
