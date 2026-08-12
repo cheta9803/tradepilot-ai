@@ -1,0 +1,393 @@
+<app-page-header
+    title="P&L History"
+    subtitle="View your day-wise trading profit and loss">
+</app-page-header>
+
+<app-section-card title="Daily Trading Performance">
+
+    <div class="toolbar">
+
+        <div class="description">
+
+            Historical profit and loss from completed trades
+
+        </div>
+
+        <button
+            mat-raised-button
+            color="primary"
+            (click)="refresh()">
+
+            <mat-icon>
+                refresh
+            </mat-icon>
+
+            Refresh
+
+        </button>
+
+    </div>
+
+    @if (loading()) {
+
+        <div class="loading">
+
+            <mat-spinner diameter="40">
+            </mat-spinner>
+
+        </div>
+
+    } @else if (history().length === 0) {
+
+        <div class="empty">
+
+            No P&L history available.
+
+        </div>
+
+    } @else {
+
+        <div class="table-container">
+
+            <table class="pnl-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>Date</th>
+
+                        <th>Trades</th>
+
+                        <th>Winning</th>
+
+                        <th>Losing</th>
+
+                        <th>Gross Profit</th>
+
+                        <th>Gross Loss</th>
+
+                        <th>Net P&amp;L</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    @for (
+                        day of history();
+                        track day.date
+                    ) {
+
+                        <tr
+                            class="clickable-row"
+                            [class.selected-row]="
+                                selectedDate() === day.date
+                            "
+                            (click)="selectDay(day.date)">
+
+                            <td>
+
+                                <strong>
+
+                                    {{
+                                        day.date
+                                            | date:'dd MMM yyyy'
+                                    }}
+
+                                </strong>
+
+                            </td>
+
+                            <td>
+
+                                {{ day.tradeCount }}
+
+                            </td>
+
+                            <td>
+
+                                {{ day.winningTrades }}
+
+                            </td>
+
+                            <td>
+
+                                {{ day.losingTrades }}
+
+                            </td>
+
+                            <td>
+
+                                <span class="profit">
+
+                                    +₹{{
+                                        day.grossProfit
+                                            | number:'1.2-2'
+                                    }}
+
+                                </span>
+
+                            </td>
+
+                            <td>
+
+                                <span
+                                    [ngClass]="
+                                        pnlClass(day.grossLoss)
+                                    ">
+
+                                    ₹{{
+                                        day.grossLoss
+                                            | number:'1.2-2'
+                                    }}
+
+                                </span>
+
+                            </td>
+
+                            <td>
+
+                                <strong
+                                    [ngClass]="
+                                        pnlClass(day.netPnl)
+                                    ">
+
+                                    @if (day.netPnl > 0) {
+
+                                        +₹{{
+                                            day.netPnl
+                                                | number:'1.2-2'
+                                        }}
+
+                                    } @else {
+
+                                        ₹{{
+                                            day.netPnl
+                                                | number:'1.2-2'
+                                        }}
+
+                                    }
+
+                                </strong>
+
+                            </td>
+
+                        </tr>
+
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    }
+
+</app-section-card>
+
+
+@if (selectedDate()) {
+
+    <app-section-card
+        title="Trade Details">
+
+        <div class="details-toolbar">
+
+            <div>
+
+                <strong>
+
+                    {{
+                        selectedDate()
+                            | date:'dd MMM yyyy'
+                    }}
+
+                </strong>
+
+                <span class="details-description">
+
+                    Completed trades for this trading day
+
+                </span>
+
+            </div>
+
+            <button
+                mat-stroked-button
+                type="button"
+                (click)="closeDetails()">
+
+                <mat-icon>
+                    close
+                </mat-icon>
+
+                Close
+
+            </button>
+
+        </div>
+
+        @if (detailsLoading()) {
+
+            <div class="loading">
+
+                <mat-spinner diameter="40">
+                </mat-spinner>
+
+            </div>
+
+        } @else if (dayTrades().length === 0) {
+
+            <div class="empty">
+
+                No completed trades found for this day.
+
+            </div>
+
+        } @else {
+
+            <div class="table-container">
+
+                <table class="pnl-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Time</th>
+
+                            <th>Symbol</th>
+
+                            <th>Side</th>
+
+                            <th>Qty</th>
+
+                            <th>Entry</th>
+
+                            <th>Exit</th>
+
+                            <th>P&amp;L</th>
+
+                            <th>Reason</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        @for (
+                            trade of dayTrades();
+                            track trade.time + trade.symbol
+                        ) {
+
+                            <tr>
+
+                                <td>
+
+                                    {{
+                                        trade.time
+                                            | date:'HH:mm'
+                                    }}
+
+                                </td>
+
+                                <td>
+
+                                    <strong>
+
+                                        {{ trade.symbol }}
+
+                                    </strong>
+
+                                </td>
+
+                                <td>
+
+                                    <span
+                                        class="side"
+                                        [ngClass]="
+                                            pnlClass(trade.pnl)
+                                        ">
+
+                                        {{ trade.side }}
+
+                                    </span>
+
+                                </td>
+
+                                <td>
+
+                                    {{ trade.quantity }}
+
+                                </td>
+
+                                <td>
+
+                                    ₹{{
+                                        trade.entryPrice
+                                            | number:'1.2-2'
+                                    }}
+
+                                </td>
+
+                                <td>
+
+                                    ₹{{
+                                        trade.exitPrice
+                                            | number:'1.2-2'
+                                    }}
+
+                                </td>
+
+                                <td>
+
+                                    <strong
+                                        [ngClass]="
+                                            pnlClass(trade.pnl)
+                                        ">
+
+                                        @if (trade.pnl > 0) {
+
+                                            +₹{{
+                                                trade.pnl
+                                                    | number:'1.2-2'
+                                            }}
+
+                                        } @else {
+
+                                            ₹{{
+                                                trade.pnl
+                                                    | number:'1.2-2'
+                                            }}
+
+                                        }
+
+                                    </strong>
+
+                                </td>
+
+                                <td>
+
+                                    {{ trade.reason || '—' }}
+
+                                </td>
+
+                            </tr>
+
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        }
+
+    </app-section-card>
+
+}

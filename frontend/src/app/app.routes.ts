@@ -127,6 +127,18 @@ export const routes: Routes = [
             },
 
             {
+                path: 'pnl-history',
+
+                loadComponent: () =>
+                    import(
+                        './features/pnl-history/pages/pnl-history/pnl-history'
+                    ).then(
+                        (m) => m.PnlHistory,
+                    ),
+
+            },
+
+            {
                 path: 'portfolio',
 
                 loadComponent: () =>

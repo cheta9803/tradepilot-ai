@@ -31,6 +31,11 @@ export const NAVIGATION: NavigationItem[] = [
     route: '/trades',
   },
   {
+    label: 'P&L History',
+    icon: 'analytics',
+    route: '/pnl-history',
+  },
+  {
     label: 'Portfolio',
     icon: 'account_balance_wallet',
     route: '/portfolio',

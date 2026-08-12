@@ -84,7 +84,7 @@ class TradeHistoryRepository:
         cls,
     ) -> float:
 
-        from datetime import datetime, timedelta
+        from datetime import timedelta
         from zoneinfo import ZoneInfo
 
         from sqlalchemy import func
@@ -124,6 +124,228 @@ class TradeHistoryRepository:
                 float(result or 0.0),
                 2,
             )
+
+        finally:
+            db.close()
+
+    @classmethod
+    def get_daily_pnl(
+        cls,
+    ) -> list[dict]:
+
+        from sqlalchemy import case, func
+
+        market_timezone = "Asia/Kolkata"
+
+        trading_date = func.date(
+            func.timezone(
+                market_timezone,
+                TradeHistory.closed_at,
+            )
+        )
+
+        trade_count = func.count(
+            TradeHistory.id
+        )
+
+        winning_trades = func.sum(
+            case(
+                (
+                    TradeHistory.pnl > 0,
+                    1,
+                ),
+                else_=0,
+            )
+        )
+
+        losing_trades = func.sum(
+            case(
+                (
+                    TradeHistory.pnl < 0,
+                    1,
+                ),
+                else_=0,
+            )
+        )
+
+        gross_profit = func.coalesce(
+            func.sum(
+                case(
+                    (
+                        TradeHistory.pnl > 0,
+                        TradeHistory.pnl,
+                    ),
+                    else_=0.0,
+                )
+            ),
+            0.0,
+        )
+
+        gross_loss = func.coalesce(
+            func.sum(
+                case(
+                    (
+                        TradeHistory.pnl < 0,
+                        -TradeHistory.pnl,
+                    ),
+                    else_=0.0,
+                )
+            ),
+            0.0,
+        )
+
+        net_pnl = func.coalesce(
+            func.sum(
+                TradeHistory.pnl
+            ),
+            0.0,
+        )
+
+        db = SessionLocal()
+
+        try:
+
+            rows = (
+                db.query(
+                    trading_date.label("date"),
+                    trade_count.label("trade_count"),
+                    winning_trades.label(
+                        "winning_trades"
+                    ),
+                    losing_trades.label(
+                        "losing_trades"
+                    ),
+                    gross_profit.label(
+                        "gross_profit"
+                    ),
+                    gross_loss.label(
+                        "gross_loss"
+                    ),
+                    net_pnl.label("net_pnl"),
+                )
+                .group_by(
+                    trading_date
+                )
+                .order_by(
+                    trading_date.desc()
+                )
+                .all()
+            )
+
+            return [
+                {
+                    "date": row.date.isoformat(),
+                    "tradeCount": int(
+                        row.trade_count
+                    ),
+                    "winningTrades": int(
+                        row.winning_trades or 0
+                    ),
+                    "losingTrades": int(
+                        row.losing_trades or 0
+                    ),
+                    "grossProfit": round(
+                        float(
+                            row.gross_profit or 0.0
+                        ),
+                        2,
+                    ),
+                    "grossLoss": round(
+                        float(
+                            row.gross_loss or 0.0
+                        ),
+                        2,
+                    ),
+                    "netPnl": round(
+                        float(
+                            row.net_pnl or 0.0
+                        ),
+                        2,
+                    ),
+                }
+                for row in rows
+            ]
+
+        finally:
+
+            db.close()
+
+
+    @classmethod
+    def get_day_trades(
+        cls,
+        trading_date: str,
+    ) -> list[dict]:
+
+        from datetime import date, datetime, time, timedelta
+        from zoneinfo import ZoneInfo
+
+        market_tz = ZoneInfo(
+            "Asia/Kolkata"
+        )
+
+        selected_date = date.fromisoformat(
+            trading_date
+        )
+
+        start = datetime.combine(
+            selected_date,
+            time.min,
+            tzinfo=market_tz,
+        )
+
+        end = start + timedelta(
+            days=1
+        )
+
+        db = SessionLocal()
+
+        try:
+
+            rows = (
+                db.query(
+                    TradeHistory
+                )
+                .filter(
+                    TradeHistory.closed_at >= start,
+                    TradeHistory.closed_at < end,
+                )
+                .order_by(
+                    TradeHistory.closed_at.desc()
+                )
+                .all()
+            )
+
+            return [
+                {
+                    "time": (
+                        row.closed_at
+                        .astimezone(market_tz)
+                        .isoformat()
+                    ),
+                    "symbol": row.symbol,
+                    "side": row.signal,
+                    "quantity": row.quantity,
+                    "entryPrice": round(
+                        float(
+                            row.entry_price
+                        ),
+                        2,
+                    ),
+                    "exitPrice": round(
+                        float(
+                            row.exit_price
+                        ),
+                        2,
+                    ),
+                    "pnl": round(
+                        float(row.pnl),
+                        2,
+                    ),
+                    "reason": row.reason,
+                }
+                for row in rows
+            ]
 
         finally:
 
