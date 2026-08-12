@@ -1,4 +1,3 @@
-
 from app.core.config import settings
 from app.core.logger import logger
 from app.core.market_session import MarketSession
@@ -52,6 +51,19 @@ class ExecutionService:
                 "BUY_ACTIVE",
                 "SELL_ACTIVE",
             ):
+
+                #
+                # Do not create another exit order while
+                # the previous exit order is waiting.
+                #
+                if (
+                    trade.get("order_role") == "EXIT"
+                    and trade.get("order_status") in (
+                        "PENDING",
+                        "OPEN",
+                    )
+                ):
+                    continue
 
                 cls._update_live_pnl(
                     trade,
@@ -216,6 +228,18 @@ class ExecutionService:
         if trade["closed_at"] is not None:
             return
 
+        #
+        # An exit order is already waiting at the broker.
+        #
+        if (
+            trade.get("order_role") == "EXIT"
+            and trade.get("order_status") in (
+                "PENDING",
+                "OPEN",
+            )
+        ):
+            return
+
         signal = trade["signal"]
 
         exit_reason = None
@@ -239,38 +263,16 @@ class ExecutionService:
         if exit_reason is None:
             return
 
-        pnl = (
-            ltp
-            - trade["entry_price"]
-        ) * trade["quantity"]
-
-        if signal == "SELL":
-            pnl *= -1
-
-        TradeLifecycle.update(
-            exchange=trade["exchange"],
-            token=trade["token"],
-            timeframe=trade["timeframe"],
-            values={
-                "state": "EXIT",
-                "exit_price": round(
-                    ltp,
-                    2,
-                ),
-                "current_price": round(
-                    ltp,
-                    2,
-                ),
-                "reason": exit_reason,
-                "pnl": round(
-                    pnl,
-                    2,
-                ),
-            },
+        success = ExecutionOrderService.execute_exit(
+            trade=trade,
+            exit_price=ltp,
+            reason=exit_reason,
         )
 
-        print(
-            f"Trade Closed "
-            f"{trade['symbol']} "
-            f"{exit_reason}"
-        )
+        if success:
+
+            print(
+                f"Trade Closed "
+                f"{trade['symbol']} "
+                f"{exit_reason}"
+            )

@@ -101,11 +101,117 @@ class OrderSyncService:
         average_price = order.get("average_price")
 
         if average_price is not None:
-            values["entry_price"] = average_price
             values["current_price"] = average_price
 
+            if trade.get("order_role") != "EXIT":
+                values["entry_price"] = average_price
+
         #
-        # Order completely executed.
+        # Exit order.
+        #
+        if trade.get("order_role") == "EXIT":
+
+            if status == "COMPLETE":
+
+                final_price = (
+                    average_price
+                    or trade.get("current_price")
+                )
+
+                if trade["signal"] == "BUY":
+
+                    pnl = (
+                        final_price
+                        - trade["entry_price"]
+                    ) * trade["quantity"]
+
+                else:
+
+                    pnl = (
+                        trade["entry_price"]
+                        - final_price
+                    ) * trade["quantity"]
+
+                values.update(
+                    {
+                        "state": "EXIT",
+                        "exit_price": round(
+                            final_price,
+                            2,
+                        ),
+                        "current_price": round(
+                            final_price,
+                            2,
+                        ),
+                        "pnl": round(
+                            pnl,
+                            2,
+                        ),
+                        "closed_at": datetime.now().isoformat(),
+                    }
+                )
+
+            elif status in (
+                "PENDING",
+                "OPEN",
+                "TRIGGER PENDING",
+            ):
+
+                #
+                # Exit is still waiting at broker.
+                # Keep the position active.
+                #
+                values["state"] = (
+                    "BUY_ACTIVE"
+                    if trade["signal"] == "BUY"
+                    else "SELL_ACTIVE"
+                )
+
+            elif status in (
+                "REJECTED",
+                "FAILED",
+            ):
+
+                #
+                # Exit failed.
+                # Keep the original position active so the
+                # execution loop can retry according to policy.
+                #
+                values.update(
+                    {
+                        "state": (
+                            "BUY_ACTIVE"
+                            if trade["signal"] == "BUY"
+                            else "SELL_ACTIVE"
+                        ),
+                        "reason": "BROKER_EXIT_ORDER_FAILED",
+                    }
+                )
+
+            elif status == "CANCELLED":
+
+                values.update(
+                    {
+                        "state": (
+                            "BUY_ACTIVE"
+                            if trade["signal"] == "BUY"
+                            else "SELL_ACTIVE"
+                        ),
+                        "reason": "BROKER_EXIT_ORDER_CANCELLED",
+                    }
+                )
+
+            TradeLifecycle.update(
+                exchange=trade["exchange"],
+                token=trade["token"],
+                timeframe=trade["timeframe"],
+                values=values,
+            )
+
+            return
+
+        #
+        # Entry order.
         #
         if status == "COMPLETE":
 
@@ -115,9 +221,6 @@ class OrderSyncService:
                 else "SELL_ACTIVE"
             )
 
-        #
-        # Still waiting at exchange.
-        #
         elif status in (
             "PENDING",
             "OPEN",
@@ -126,9 +229,6 @@ class OrderSyncService:
 
             values["state"] = "ENTRY_READY"
 
-        #
-        # Broker rejected or failed order.
-        #
         elif status in (
             "REJECTED",
             "FAILED",
@@ -142,9 +242,6 @@ class OrderSyncService:
                 }
             )
 
-        #
-        # Broker cancelled order.
-        #
         elif status == "CANCELLED":
 
             values.update(

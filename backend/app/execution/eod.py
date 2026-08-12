@@ -1,20 +1,20 @@
-from datetime import datetime
-from zoneinfo import ZoneInfo
-
 from app.core.config import settings
+from app.execution.order_service import ExecutionOrderService
 from app.live.redis_cache import LiveCache
-from app.trades.lifecycle import TradeLifecycle
 from app.trades.service import TradeService
 
 
 class EndOfDayService:
 
-    MARKET_TZ = ZoneInfo("Asia/Kolkata")
-
     @classmethod
     def should_square_off(cls) -> bool:
 
-        now = datetime.now(cls.MARKET_TZ)
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        market_tz = ZoneInfo("Asia/Kolkata")
+
+        now = datetime.now(market_tz)
 
         return (
             now.hour > settings.market_close_hour
@@ -40,43 +40,38 @@ class EndOfDayService:
             ):
                 continue
 
-            live = LiveCache.get(trade["token"])
+            #
+            # Do not submit another EOD exit if an exit
+            # order is already waiting.
+            #
+            if (
+                trade.get("order_role") == "EXIT"
+                and trade.get("order_status") in (
+                    "PENDING",
+                    "OPEN",
+                )
+            ):
+                continue
+
+            live = LiveCache.get(
+                trade["token"]
+            )
 
             if live is None:
                 continue
 
-            ltp = live["ltp"]
+            ltp = float(live["ltp"])
 
-            if trade["signal"] == "BUY":
-
-                pnl = (
-                    ltp
-                    - trade["entry_price"]
-                ) * trade["quantity"]
-
-            else:
-
-                pnl = (
-                    trade["entry_price"]
-                    - ltp
-                ) * trade["quantity"]
-
-            TradeLifecycle.update(
-                exchange=trade["exchange"],
-                token=trade["token"],
-                timeframe=trade["timeframe"],
-                values={
-                    "state": "EXIT",
-                    "reason": "EOD",
-                    "exit_price": round(ltp, 2),
-                    "closed_at": datetime.now().isoformat(),
-                    "current_price": round(ltp, 2),
-                    "pnl": round(pnl, 2),
-                },
+            success = ExecutionOrderService.execute_exit(
+                trade=trade,
+                exit_price=ltp,
+                reason="EOD",
             )
 
-            print(
-                f"EOD Square-Off "
-                f"{trade['symbol']} "
-                f"{trade['timeframe']}"
-            )
+            if success:
+
+                print(
+                    f"EOD Square-Off "
+                    f"{trade['symbol']} "
+                    f"{trade['timeframe']}"
+                )
