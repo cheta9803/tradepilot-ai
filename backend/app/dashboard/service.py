@@ -15,6 +15,8 @@ class DashboardService:
 
         portfolio = PortfolioService.summary()
 
+        today_pnl = PortfolioService.today_pnl()
+
         positions = [
             DashboardMapper.position(trade)
             for trade in TradeService.get_open()
@@ -55,6 +57,7 @@ class DashboardService:
         return DashboardResponse(
             summary=DashboardMapper.summary(
                 portfolio,
+                today_pnl,
             ),
             indices=indices,
             positions=positions,

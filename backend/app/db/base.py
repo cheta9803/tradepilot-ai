@@ -9,3 +9,4 @@ from app.users.models import User
 from app.watchlist.models import Watchlist
 from app.instruments.models import Instrument
 from app.candles.db_models import CandleModel
+from app.trades.db_models import TradeHistory

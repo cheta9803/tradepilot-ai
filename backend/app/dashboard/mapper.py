@@ -9,11 +9,14 @@ from app.dashboard.models import (
 class DashboardMapper:
 
     @staticmethod
-    def summary(portfolio) -> DashboardSummary:
+    def summary(
+        portfolio,
+        today_pnl: float,
+    ) -> DashboardSummary:
 
         return DashboardSummary(
             portfolioValue=portfolio.capital,
-            todayPnL=portfolio.total_pnl,
+            todayPnL=today_pnl,
             availableMargin=portfolio.available,
             openPositions=portfolio.open_positions,
         )

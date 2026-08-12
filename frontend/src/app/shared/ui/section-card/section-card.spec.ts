@@ -10,9 +10,13 @@ describe('SectionCard', () => {
     await TestBed.configureTestingModule({
       imports: [SectionCard]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(SectionCard);
+    fixture.componentRef.setInput(
+      'title',
+      'Test Section',
+    );
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

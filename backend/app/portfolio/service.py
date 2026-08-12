@@ -1,6 +1,7 @@
 from app.core.config import settings
 from app.portfolio.models import Portfolio
 from app.trades.service import TradeService
+from app.trades.history_repository import TradeHistoryRepository
 
 
 class PortfolioService:
@@ -73,4 +74,25 @@ class PortfolioService:
             realized_pnl=round(realized_pnl, 2),
             unrealized_pnl=round(unrealized_pnl, 2),
             total_pnl=round(total_pnl, 2),
+        )
+
+    @classmethod
+    def today_pnl(cls) -> float:
+
+        realized_pnl = (
+            TradeHistoryRepository.get_today_realized_pnl()
+        )
+
+        unrealized_pnl = 0.0
+
+        for trade in TradeService.get_open():
+
+            unrealized_pnl += trade.get(
+                "pnl",
+                0.0,
+            )
+
+        return round(
+            realized_pnl + unrealized_pnl,
+            2,
         )

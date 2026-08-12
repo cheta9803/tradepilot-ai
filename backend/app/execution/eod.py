@@ -49,6 +49,7 @@ class EndOfDayService:
                 and trade.get("order_status") in (
                     "PENDING",
                     "OPEN",
+                    "TRIGGER PENDING",
                 )
             ):
                 continue

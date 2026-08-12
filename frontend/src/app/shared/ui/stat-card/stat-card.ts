@@ -13,4 +13,5 @@ export class StatCard {
   readonly title = input.required<string>();
   readonly value = input.required<string | number | null>();
   readonly icon = input.required<string>();
+  readonly valueClass = input<string>('');
 }

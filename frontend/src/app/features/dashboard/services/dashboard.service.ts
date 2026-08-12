@@ -282,17 +282,6 @@ export class DashboardService {
 
         const positions = this._positions();
 
-        const todayPnL = positions.reduce(
-
-            (
-                total,
-                position,
-            ) => total + position.pnl,
-
-            0,
-
-        );
-
         const portfolioValue = positions.reduce(
 
             (
@@ -307,10 +296,6 @@ export class DashboardService {
         this._summary.update(summary => ({
 
             ...summary,
-
-            todayPnL: Number(
-                todayPnL.toFixed(2),
-            ),
 
             portfolioValue: Number(
                 portfolioValue.toFixed(2),

@@ -10,10 +10,27 @@ describe('StatCard', () => {
     await TestBed.configureTestingModule({
       imports: [StatCard]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(StatCard);
+
+    fixture.componentRef.setInput(
+      'title',
+      'Test',
+    );
+
+    fixture.componentRef.setInput(
+      'value',
+      100,
+    );
+
+    fixture.componentRef.setInput(
+      'icon',
+      'trending_up',
+    );
+
     component = fixture.componentInstance;
+
     await fixture.whenStable();
   });
 

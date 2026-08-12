@@ -5,6 +5,7 @@ from app.db.redis import redis_client
 from app.trades.cache import TradeCache
 from app.trades.models import Trade
 from app.core.market_session import MarketSession
+from app.trades.history_repository import TradeHistoryRepository
 
 
 class TradeLifecycle:
@@ -132,11 +133,19 @@ class TradeLifecycle:
         #
         # Trade completed
         #
-        if (
-            current_state == "EXIT"
-            and trade.get("closed_at") is None
-        ):
-            trade["closed_at"] = now
+        trade_closed_now = (
+            previous_state != "EXIT"
+            and current_state == "EXIT"
+        )
+
+        if trade_closed_now:
+
+            if trade.get("closed_at") is None:
+                trade["closed_at"] = now
+
+            TradeHistoryRepository.create_from_trade(
+                trade,
+            )
 
         #
         # Failed / cancelled / rejected

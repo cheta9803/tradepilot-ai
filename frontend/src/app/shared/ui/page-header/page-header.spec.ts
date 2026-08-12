@@ -10,10 +10,14 @@ describe('PageHeader', () => {
     await TestBed.configureTestingModule({
       imports: [PageHeader]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(PageHeader);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput(
+      'title',
+      'Test Header',
+    );
     await fixture.whenStable();
   });
 

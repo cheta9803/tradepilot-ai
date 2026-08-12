@@ -10,7 +10,8 @@
 
     </div>
 
-    <div class="value">
+    <div class="value" [class.profit]="valueClass() === 'profit'" [class.loss]="valueClass() === 'loss'"
+      [class.neutral]="valueClass() === 'neutral'">
 
       {{ value() }}
 

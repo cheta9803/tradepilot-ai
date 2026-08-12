@@ -236,6 +236,7 @@ class ExecutionService:
             and trade.get("order_status") in (
                 "PENDING",
                 "OPEN",
+                "TRIGGER PENDING",
             )
         ):
             return
