@@ -47,6 +47,8 @@ class Trade:
 
     order_id: str | None = None
 
+    order_role: str = "ENTRY"
+
     order_status: str | None = None
 
     broker: str | None = None
