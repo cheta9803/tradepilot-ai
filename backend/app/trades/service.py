@@ -39,6 +39,7 @@ class TradeService:
                 "BUY_ACTIVE",
                 "SELL_ACTIVE",
             )
+            and trade.get("order_status") != "FAILED"
         ]
 
     @classmethod

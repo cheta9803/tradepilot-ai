@@ -358,7 +358,11 @@ class StrategyEngine:
             stop_loss=stop_loss,
             target=target,
             quantity=position["quantity"],
-            execution_mode="LIVE",
+            execution_mode=(
+                "PAPER"
+                if settings.paper_trading
+                else "LIVE"
+            ),
         )
 
         print(

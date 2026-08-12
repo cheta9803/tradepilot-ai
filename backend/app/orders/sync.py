@@ -3,6 +3,7 @@ from datetime import datetime
 from app.angel.client import AngelClient
 from app.core.config import settings
 from app.core.logger import logger
+from app.core.market_session import MarketSession
 from app.trades.lifecycle import TradeLifecycle
 from app.trades.service import TradeService
 
@@ -12,20 +13,54 @@ class OrderSyncService:
     @classmethod
     def sync_all(cls) -> None:
 
+        # ---------------------------------------------------------
+        # Safety guard:
+        #
+        # Paper trading never communicates with the broker order book.
+        # ---------------------------------------------------------
+
         if settings.paper_trading:
+
             logger.debug(
-                "Order Sync skipped (paper trading enabled)"
+                "Broker order sync skipped: paper trading enabled."
             )
+
+            return
+
+        # ---------------------------------------------------------
+        # Live trading must be explicitly enabled.
+        # ---------------------------------------------------------
+
+        if not settings.live_trading_enabled:
+
+            logger.debug(
+                "Broker order sync skipped: live trading disabled."
+            )
+
+            return
+
+        # ---------------------------------------------------------
+        # No reason to poll broker orders while the market is closed.
+        # ---------------------------------------------------------
+
+        if not MarketSession.is_open():
+
+            logger.debug(
+                "Broker order sync skipped: market is closed."
+            )
+
             return
 
         trades = TradeService.get_open()
 
         if not trades:
+
             return
 
         orders = cls.fetch_orders()
 
         if not orders:
+
             return
 
         for trade in trades:
@@ -33,11 +68,15 @@ class OrderSyncService:
             order_id = trade.get("order_id")
 
             if not order_id:
+
                 continue
 
-            order = orders.get(order_id)
+            order = orders.get(
+                order_id
+            )
 
             if order is None:
+
                 continue
 
             cls.sync_trade(
@@ -88,14 +127,17 @@ class OrderSyncService:
             values["state"] = "ENTRY_READY"
 
         #
-        # Broker rejected order.
+        # Broker rejected or failed order.
         #
-        elif status == "REJECTED":
+        elif status in (
+            "REJECTED",
+            "FAILED",
+        ):
 
             values.update(
                 {
                     "state": "ENTRY_FAILED",
-                    "reason": "Broker Rejected",
+                    "reason": "Broker Order Failed",
                     "closed_at": datetime.now().isoformat(),
                 }
             )
