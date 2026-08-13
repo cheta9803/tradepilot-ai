@@ -80,17 +80,12 @@ class TradeHistoryRepository:
             db.close()
 
     @classmethod
-    def get_today_realized_pnl(
-        cls,
-    ) -> float:
+    def _today_window(cls):
 
         from datetime import timedelta
         from zoneinfo import ZoneInfo
 
-        from sqlalchemy import func
-
         market_tz = ZoneInfo("Asia/Kolkata")
-
         now = datetime.now(market_tz)
 
         start = now.replace(
@@ -101,6 +96,17 @@ class TradeHistoryRepository:
         )
 
         end = start + timedelta(days=1)
+
+        return start, end
+
+    @classmethod
+    def get_today_realized_pnl(
+        cls,
+    ) -> float:
+
+        from sqlalchemy import func
+
+        start, end = cls._today_window()
 
         db = SessionLocal()
 
@@ -124,6 +130,101 @@ class TradeHistoryRepository:
                 float(result or 0.0),
                 2,
             )
+
+        finally:
+            db.close()
+
+    @classmethod
+    def get_today_gross_loss(
+        cls,
+    ) -> float:
+
+        from sqlalchemy import case, func
+
+        start, end = cls._today_window()
+
+        gross_loss = func.coalesce(
+            func.sum(
+                case(
+                    (
+                        TradeHistory.pnl < 0,
+                        -TradeHistory.pnl,
+                    ),
+                    else_=0.0,
+                )
+            ),
+            0.0,
+        )
+
+        db = SessionLocal()
+
+        try:
+
+            result = (
+                db.query(gross_loss)
+                .filter(
+                    TradeHistory.closed_at >= start,
+                    TradeHistory.closed_at < end,
+                )
+                .scalar()
+            )
+
+            return round(
+                float(result or 0.0),
+                2,
+            )
+
+        finally:
+            db.close()
+
+    @classmethod
+    def get_today_loss_streak(
+        cls,
+    ) -> tuple[int, datetime | None]:
+        """
+        Return today's consecutive losing-trade streak.
+
+        The first tuple value is the number of consecutive losing
+        completed trades, starting from the most recent completed trade.
+        The second value is the close time of the most recent trade when
+        that streak exists.
+
+        A profitable or break-even trade resets the consecutive-loss streak.
+        """
+
+        start, end = cls._today_window()
+
+        db = SessionLocal()
+
+        try:
+
+            rows = (
+                db.query(TradeHistory.pnl, TradeHistory.closed_at)
+                .filter(
+                    TradeHistory.closed_at >= start,
+                    TradeHistory.closed_at < end,
+                )
+                .order_by(
+                    TradeHistory.closed_at.desc(),
+                    TradeHistory.id.desc(),
+                )
+                .all()
+            )
+
+            streak = 0
+            latest_loss_at = None
+
+            for pnl, closed_at in rows:
+
+                if float(pnl or 0.0) >= 0:
+                    break
+
+                streak += 1
+
+                if latest_loss_at is None:
+                    latest_loss_at = closed_at
+
+            return streak, latest_loss_at
 
         finally:
             db.close()
@@ -269,7 +370,6 @@ class TradeHistoryRepository:
         finally:
 
             db.close()
-
 
     @classmethod
     def get_day_trades(

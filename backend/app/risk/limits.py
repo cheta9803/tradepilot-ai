@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from app.core.config import settings
-from app.trades.cache import TradeCache
+from app.trades.history_repository import TradeHistoryRepository
 
 
 class RiskLimits:
@@ -21,32 +21,64 @@ class RiskLimits:
     @classmethod
     def daily_loss_reached(cls) -> bool:
         """
-        Returns True if today's realized loss
-        exceeds the configured limit.
+        Returns True if today's gross realized loss
+        reaches or exceeds the configured limit.
+
+        Gross loss counts only losing trades.
+        Profits do not offset losses.
         """
 
-        today = datetime.now().date()
+        total_loss = (
+            TradeHistoryRepository.get_today_gross_loss()
+        )
 
-        total_loss = 0.0
+        return (
+            total_loss
+            >= settings.max_daily_loss
+        )
 
-        for trade in TradeCache.get_all():
+    @classmethod
+    def loss_cooldown_reached(cls) -> bool:
+        """
+        Returns True while the configured consecutive-loss cooldown
+        is active.
 
-            closed_at = trade.get("closed_at")
+        Example:
+            cooldown_after_losses = 3
+            cooldown_minutes = 30
 
-            if not closed_at:
-                continue
+        Three consecutive losing completed trades start a 30-minute
+        block on new entries. A profitable or break-even trade resets
+        the consecutive-loss streak.
+        """
 
-            try:
-                closed_date = datetime.fromisoformat(closed_at).date()
-            except (TypeError, ValueError):
-                continue
+        required_losses = settings.cooldown_after_losses
+        cooldown_minutes = settings.cooldown_minutes
 
-            if closed_date != today:
-                continue
+        if required_losses <= 0 or cooldown_minutes <= 0:
+            return False
 
-            pnl = float(trade.get("pnl") or 0.0)
+        streak, latest_loss_at = (
+            TradeHistoryRepository.get_today_loss_streak()
+        )
 
-            if pnl < 0:
-                total_loss += abs(pnl)
+        if (
+            streak < required_losses
+            or latest_loss_at is None
+        ):
+            return False
 
-        return total_loss >= settings.max_daily_loss
+        now = datetime.now(
+            latest_loss_at.tzinfo
+            if latest_loss_at.tzinfo is not None
+            else None
+        )
+
+        elapsed_seconds = (
+            now - latest_loss_at
+        ).total_seconds()
+
+        return (
+            elapsed_seconds
+            < cooldown_minutes * 60
+        )

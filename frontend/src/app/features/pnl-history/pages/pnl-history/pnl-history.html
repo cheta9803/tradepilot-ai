@@ -133,10 +133,7 @@
 
                             <td>
 
-                                <span
-                                    [ngClass]="
-                                        pnlClass(day.grossLoss)
-                                    ">
+                                <span [ngClass]="grossLossClass()">
 
                                     ₹{{
                                         day.grossLoss
@@ -372,7 +369,7 @@
 
                                 <td>
 
-                                    {{ trade.reason || '—' }}
+                                    {{ reasonLabel(trade.reason) }}
 
                                 </td>
 

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.angel.client import AngelClient
 from app.core.config import settings
@@ -95,7 +95,7 @@ class OrderSyncService:
 
         values = {
             "order_status": status,
-            "updated_at": datetime.now().isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
         }
 
         average_price = order.get("average_price")
@@ -147,7 +147,7 @@ class OrderSyncService:
                             pnl,
                             2,
                         ),
-                        "closed_at": datetime.now().isoformat(),
+                        "closed_at": datetime.now(UTC).isoformat(),
                     }
                 )
 
@@ -238,7 +238,7 @@ class OrderSyncService:
                 {
                     "state": "ENTRY_FAILED",
                     "reason": "Broker Order Failed",
-                    "closed_at": datetime.now().isoformat(),
+                    "closed_at": datetime.now(UTC).isoformat(),
                 }
             )
 
@@ -248,7 +248,7 @@ class OrderSyncService:
                 {
                     "state": "CANCELLED",
                     "reason": "Broker Cancelled",
-                    "closed_at": datetime.now().isoformat(),
+                    "closed_at": datetime.now(UTC).isoformat(),
                 }
             )
 

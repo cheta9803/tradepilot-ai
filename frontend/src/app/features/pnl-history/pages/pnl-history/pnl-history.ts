@@ -1,6 +1,7 @@
 import {
     ChangeDetectionStrategy,
     Component,
+    DestroyRef,
     OnInit,
     inject,
     signal,
@@ -23,6 +24,14 @@ import {
 import {
     MatProgressSpinnerModule,
 } from '@angular/material/progress-spinner';
+
+import {
+    interval,
+} from 'rxjs';
+
+import {
+    takeUntilDestroyed,
+} from '@angular/core/rxjs-interop';
 
 import {
     PageHeader,
@@ -61,53 +70,124 @@ import {
 })
 export class PnlHistory implements OnInit {
 
-    private readonly service = inject(
-        PnlHistoryService,
-    );
+    private readonly service =
+        inject(PnlHistoryService);
 
-    readonly history = signal<DailyPnl[]>([]);
+    private readonly destroyRef =
+        inject(DestroyRef);
 
-    readonly selectedDate = signal<string | null>(
-        null,
-    );
+    readonly history =
+        signal<DailyPnl[]>([]);
 
-    readonly dayTrades = signal<DailyPnlTrade[]>([]);
+    readonly selectedDate =
+        signal<string | null>(null);
 
-    readonly loading = signal(false);
+    readonly dayTrades =
+        signal<DailyPnlTrade[]>([]);
 
-    readonly detailsLoading = signal(false);
+    readonly loading =
+        signal(false);
+
+    readonly detailsLoading =
+        signal(false);
+
 
     ngOnInit(): void {
 
+        /*
+         * Load immediately when the page opens.
+         */
         this.refresh();
 
+        /*
+         * Automatically refresh P&L history.
+         *
+         * This keeps today's:
+         * - trade count
+         * - winning trades
+         * - losing trades
+         * - gross profit
+         * - gross loss
+         * - net P&L
+         *
+         * up to date without browser refresh.
+         */
+        interval(5_000)
+            .pipe(
+                takeUntilDestroyed(
+                    this.destroyRef,
+                ),
+            )
+            .subscribe(() => {
+
+                this.refresh();
+
+                /*
+                 * If the user currently has a day
+                 * selected, refresh its trade details too.
+                 */
+                const date =
+                    this.selectedDate();
+
+                if (date) {
+
+                    this.refreshDayTrades(
+                        date,
+                        false,
+                    );
+
+                }
+
+            });
+
     }
+
 
     refresh(): void {
 
-        this.loading.set(true);
+        /*
+         * Don't show the full-page spinner for
+         * every 5-second background refresh.
+         *
+         * Only show it when there is no data yet.
+         */
+        if (this.history().length === 0) {
 
-        this.service.getDailyPnl().subscribe({
+            this.loading.set(true);
 
-            next: (data) => {
+        }
 
-                this.history.set(data);
+        this.service
+            .getDailyPnl()
+            .subscribe({
 
-                this.loading.set(false);
+                next: data => {
 
-            },
+                    this.history.set(data);
 
-            error: () => {
+                    this.loading.set(false);
 
-                this.history.set([]);
+                },
 
-                this.loading.set(false);
+                error: error => {
 
-            },
+                    console.error(
+                        'P&L history API failed:',
+                        error,
+                    );
 
-        });
+                    /*
+                     * Don't destroy existing data just
+                     * because one background request failed.
+                     */
+                    this.loading.set(false);
+
+                },
+
+            });
 
     }
+
 
     selectDay(
         date: string,
@@ -117,29 +197,72 @@ export class PnlHistory implements OnInit {
 
         this.dayTrades.set([]);
 
-        this.detailsLoading.set(true);
-
-        this.service.getDayTrades(date).subscribe({
-
-            next: (data) => {
-
-                this.dayTrades.set(data);
-
-                this.detailsLoading.set(false);
-
-            },
-
-            error: () => {
-
-                this.dayTrades.set([]);
-
-                this.detailsLoading.set(false);
-
-            },
-
-        });
+        this.refreshDayTrades(
+            date,
+            true,
+        );
 
     }
+
+
+    private refreshDayTrades(
+        date: string,
+        showLoading: boolean,
+    ): void {
+
+        if (showLoading) {
+
+            this.detailsLoading.set(true);
+
+        }
+
+        this.service
+            .getDayTrades(date)
+            .subscribe({
+
+                next: data => {
+
+                    /*
+                     * Ignore the response if the user has
+                     * already selected another day.
+                     */
+                    if (
+                        this.selectedDate() === date
+                    ) {
+
+                        this.dayTrades.set(data);
+
+                    }
+
+                    this.detailsLoading.set(false);
+
+                },
+
+                error: error => {
+
+                    console.error(
+                        'P&L day trades API failed:',
+                        error,
+                    );
+
+                    /*
+                     * During background refresh we keep
+                     * the existing trade details visible.
+                     */
+                    if (showLoading) {
+
+                        this.dayTrades.set([]);
+
+                    }
+
+                    this.detailsLoading.set(false);
+
+                },
+
+            });
+
+    }
+
 
     closeDetails(): void {
 
@@ -147,6 +270,38 @@ export class PnlHistory implements OnInit {
 
         this.dayTrades.set([]);
 
+    }
+
+
+
+
+    grossLossClass(): string {
+
+        return 'loss';
+    }
+
+    reasonLabel(
+        reason: string | null,
+    ): string {
+
+        if (!reason) {
+            return '—';
+        }
+
+        const labels: Record<string, string> = {
+            TARGET: 'TARGET',
+            STOPLOSS: 'STOP LOSS',
+            TRAILING_STOP: 'TRAILING STOP',
+            BREAKEVEN_STOP: 'BREAKEVEN STOP',
+            EOD: 'END OF DAY',
+            BROKER_EXIT_ORDER_FAILED:
+                'EXIT ORDER FAILED',
+        };
+
+        return labels[reason] ?? reason.replaceAll(
+            '_',
+            ' ',
+        );
     }
 
     pnlClass(

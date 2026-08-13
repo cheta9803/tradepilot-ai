@@ -74,3 +74,24 @@ def test_closed_trades_not_counted():
     finally:
         settings.max_open_trades = old_limit
         TradeCache.get_all = original
+
+def test_cooldown_blocks_new_trade(monkeypatch):
+
+    monkeypatch.setattr(
+        "app.pretrade.engine.RiskLimits.daily_loss_reached",
+        lambda: False,
+    )
+
+    monkeypatch.setattr(
+        "app.pretrade.engine.RiskLimits.loss_cooldown_reached",
+        lambda: True,
+    )
+
+    monkeypatch.setattr(
+        "app.pretrade.engine.MaxOpenTradesPolicy.reached",
+        lambda: False,
+    )
+
+    from app.pretrade.engine import PreTradeRiskEngine
+
+    assert PreTradeRiskEngine.can_open_trade() is False

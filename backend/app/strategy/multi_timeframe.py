@@ -8,6 +8,10 @@ class MultiTimeframeStrategy:
     15m = market bias
     5m  = setup + risk timeframe
     1m  = entry trigger
+
+    The 1m timeframe must have an actual price-action trigger in addition
+    to directional alignment. This prevents every aligned indicator state
+    from becoming a new trade.
     """
 
     TIMEFRAMES = ("15m", "5m", "1m")
@@ -100,6 +104,30 @@ class MultiTimeframeStrategy:
                 ),
             )
 
+        entry_strategy = strategies["1m"]
+
+        if not entry_strategy.get("entry_trigger", False):
+            trigger_reason = entry_strategy.get(
+                "entry_trigger_reason"
+            )
+
+            if trigger_reason:
+                reason = (
+                    "1m signal aligned, but entry trigger is not confirmed: "
+                    f"{trigger_reason}"
+                )
+            else:
+                reason = (
+                    "1m signal aligned, but no fresh price-action "
+                    "entry trigger is confirmed."
+                )
+
+            return cls._wait_result(
+                signals=signals,
+                confidences=confidences,
+                reason=reason,
+            )
+
         confidence = round(
             sum(
                 confidences[timeframe] * cls.WEIGHTS[timeframe]
@@ -107,7 +135,6 @@ class MultiTimeframeStrategy:
             )
         )
 
-        entry_strategy = strategies["1m"]
         risk_strategy = strategies["5m"]
 
         entry = float(entry_strategy["entry"])
@@ -122,10 +149,16 @@ class MultiTimeframeStrategy:
         reasons = [
             "15m bias aligned",
             "5m setup aligned",
-            "1m entry trigger aligned",
+            "1m signal aligned",
+            "1m price-action entry trigger confirmed",
             "Stop-loss based on 5m ATR",
             "Risk/reward = 1:2",
         ]
+
+        if entry_strategy.get("entry_trigger_reason"):
+            reasons.append(
+                entry_strategy["entry_trigger_reason"]
+            )
 
         return {
             "signal": direction,
@@ -139,6 +172,10 @@ class MultiTimeframeStrategy:
             "target": target,
             "risk_reward": RiskManager.RISK_REWARD,
             "atr_5m": atr_5m,
+            "entry_trigger": True,
+            "entry_trigger_reason": entry_strategy.get(
+                "entry_trigger_reason"
+            ),
             "reasons": reasons,
         }
 
@@ -161,5 +198,7 @@ class MultiTimeframeStrategy:
             "target": None,
             "risk_reward": RiskManager.RISK_REWARD,
             "atr_5m": None,
+            "entry_trigger": False,
+            "entry_trigger_reason": None,
             "reasons": [reason],
         }

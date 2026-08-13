@@ -5,20 +5,33 @@ from app.trades.db_models import TradeHistory
 from app.trades.history_repository import TradeHistoryRepository
 
 
+TEST_ORDER_IDS = [
+    "TEST-DAILY-PNL-1",
+    "TEST-DAILY-PNL-2",
+    "TEST-DAILY-PNL-3",
+]
+
+
 def test_get_daily_pnl():
+
+    test_date = datetime(
+        2099,
+        1,
+        1,
+        10,
+        0,
+        tzinfo=timezone.utc,
+    )
 
     db = SessionLocal()
 
     try:
+
         rows = (
             db.query(TradeHistory)
             .filter(
                 TradeHistory.order_id.in_(
-                    [
-                        "TEST-DAILY-PNL-1",
-                        "TEST-DAILY-PNL-2",
-                        "TEST-DAILY-PNL-3",
-                    ]
+                    TEST_ORDER_IDS
                 )
             )
             .all()
@@ -42,8 +55,8 @@ def test_get_daily_pnl():
                     exit_price=110.0,
                     pnl=100.0,
                     reason="TARGET",
-                    opened_at=datetime.now(timezone.utc),
-                    closed_at=datetime.now(timezone.utc),
+                    opened_at=test_date,
+                    closed_at=test_date,
                     order_id="TEST-DAILY-PNL-1",
                     execution_mode="PAPER",
                 ),
@@ -58,8 +71,8 @@ def test_get_daily_pnl():
                     exit_price=95.0,
                     pnl=-50.0,
                     reason="STOPLOSS",
-                    opened_at=datetime.now(timezone.utc),
-                    closed_at=datetime.now(timezone.utc),
+                    opened_at=test_date,
+                    closed_at=test_date,
                     order_id="TEST-DAILY-PNL-2",
                     execution_mode="PAPER",
                 ),
@@ -74,8 +87,8 @@ def test_get_daily_pnl():
                     exit_price=105.0,
                     pnl=50.0,
                     reason="TARGET",
-                    opened_at=datetime.now(timezone.utc),
-                    closed_at=datetime.now(timezone.utc),
+                    opened_at=test_date,
+                    closed_at=test_date,
                     order_id="TEST-DAILY-PNL-3",
                     execution_mode="PAPER",
                 ),
@@ -88,30 +101,31 @@ def test_get_daily_pnl():
         db.close()
 
     try:
+
         result = TradeHistoryRepository.get_daily_pnl()
 
-        assert len(result) >= 1
+        test_day = next(
+            row
+            for row in result
+            if row["date"] == "2099-01-01"
+        )
 
-        today = result[0]
-
-        assert today["tradeCount"] >= 3
-        assert today["winningTrades"] >= 2
-        assert today["losingTrades"] >= 1
-        assert today["grossProfit"] >= 150.0
-        assert today["grossLoss"] >= 50.0
-        assert today["netPnl"] >= 100.0
+        assert test_day["tradeCount"] == 3
+        assert test_day["winningTrades"] == 2
+        assert test_day["losingTrades"] == 1
+        assert test_day["grossProfit"] == 150.0
+        assert test_day["grossLoss"] == 50.0
+        assert test_day["netPnl"] == 100.0
 
     finally:
+
         db = SessionLocal()
 
         try:
+
             db.query(TradeHistory).filter(
                 TradeHistory.order_id.in_(
-                    [
-                        "TEST-DAILY-PNL-1",
-                        "TEST-DAILY-PNL-2",
-                        "TEST-DAILY-PNL-3",
-                    ]
+                    TEST_ORDER_IDS
                 )
             ).delete(
                 synchronize_session=False

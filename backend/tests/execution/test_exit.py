@@ -191,3 +191,93 @@ def test_exit_order_failure_does_not_close_trade(monkeypatch):
     assert updates["order_role"] == "EXIT"
     assert updates["reason"] == "BROKER_EXIT_ORDER_FAILED"
     assert "state" not in updates
+
+def test_trailing_stop_exit_uses_trailing_reason(monkeypatch):
+
+    captured = {}
+
+    def fake_execute_exit(*, trade, exit_price, reason):
+        captured["reason"] = reason
+        return True
+
+    monkeypatch.setattr(
+        "app.execution.service.ExecutionOrderService.execute_exit",
+        fake_execute_exit,
+    )
+
+    trade = {
+        **_trade("BUY"),
+        "closed_at": None,
+        "stop_loss": 105.0,
+        "trail_started": True,
+        "stop_reason": "TRAILING_STOP",
+    }
+
+    from app.execution.service import ExecutionService
+
+    ExecutionService._process_exit(
+        trade,
+        104.5,
+    )
+
+    assert captured["reason"] == "TRAILING_STOP"
+
+
+def test_breakeven_stop_exit_uses_breakeven_reason(monkeypatch):
+
+    captured = {}
+
+    def fake_execute_exit(*, trade, exit_price, reason):
+        captured["reason"] = reason
+        return True
+
+    monkeypatch.setattr(
+        "app.execution.service.ExecutionOrderService.execute_exit",
+        fake_execute_exit,
+    )
+
+    trade = {
+        **_trade("BUY"),
+        "closed_at": None,
+        "stop_loss": 100.0,
+        "breakeven_done": True,
+        "stop_reason": "BREAKEVEN_STOP",
+    }
+
+    from app.execution.service import ExecutionService
+
+    ExecutionService._process_exit(
+        trade,
+        99.5,
+    )
+
+    assert captured["reason"] == "BREAKEVEN_STOP"
+
+
+def test_initial_stop_exit_uses_stoploss_reason(monkeypatch):
+
+    captured = {}
+
+    def fake_execute_exit(*, trade, exit_price, reason):
+        captured["reason"] = reason
+        return True
+
+    monkeypatch.setattr(
+        "app.execution.service.ExecutionOrderService.execute_exit",
+        fake_execute_exit,
+    )
+
+    trade = {
+        **_trade("BUY"),
+        "closed_at": None,
+        "stop_reason": "STOPLOSS",
+    }
+
+    from app.execution.service import ExecutionService
+
+    ExecutionService._process_exit(
+        trade,
+        94.5,
+    )
+
+    assert captured["reason"] == "STOPLOSS"

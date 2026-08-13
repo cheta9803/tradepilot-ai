@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 import json
 
 from app.db.redis import redis_client
@@ -84,6 +84,7 @@ class TradeLifecycle:
             lowest_price=entry,
             trail_started=False,
             breakeven_done=False,
+            stop_reason="STOPLOSS",
         )
 
         TradeCache.save(
@@ -115,7 +116,7 @@ class TradeLifecycle:
 
         current_state = trade["state"]
 
-        now = datetime.now().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         #
         # Entry activated

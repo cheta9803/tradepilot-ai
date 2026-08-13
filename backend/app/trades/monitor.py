@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.core.logger import logger
 from app.live.redis_cache import LiveCache
@@ -19,6 +19,7 @@ class TradeMonitor:
     ) -> None:
 
         try:
+
             trade_data = TradeCache.get(
                 exchange=exchange,
                 token=token,
@@ -26,6 +27,18 @@ class TradeMonitor:
             )
 
             if trade_data is None:
+                return
+
+            #
+            # TradeMonitor only manages live market values.
+            #
+            # Exit decisions are handled centrally by
+            # ExecutionService.
+            #
+            if trade_data["state"] not in (
+                "BUY_ACTIVE",
+                "SELL_ACTIVE",
+            ):
                 return
 
             live = LiveCache.get(token)
@@ -39,52 +52,21 @@ class TradeMonitor:
 
             trade.current_price = price
 
-            if trade.state in (
-                "BUY_ACTIVE",
-                "SELL_ACTIVE",
-            ):
+            trade.pnl = PnLCalculator.calculate(
+                signal=trade.signal,
+                entry=trade.entry_price,
+                current=price,
+                quantity=trade.quantity,
+            )
 
-                trade.pnl = PnLCalculator.calculate(
-                    signal=trade.signal,
-                    entry=trade.entry_price,
-                    current=price,
-                    quantity=trade.quantity,
-                )
-
-                if trade.state == "BUY_ACTIVE":
-
-                    if price >= trade.target:
-                        trade.state = "TARGET_HIT"
-                        trade.exit_price = price
-                        trade.reason = "TARGET"
-                        trade.closed_at = datetime.now().isoformat()
-
-                    elif price <= trade.stop_loss:
-                        trade.state = "STOPLOSS_HIT"
-                        trade.exit_price = price
-                        trade.reason = "STOPLOSS"
-                        trade.closed_at = datetime.now().isoformat()
-
-                elif trade.state == "SELL_ACTIVE":
-
-                    if price <= trade.target:
-                        trade.state = "TARGET_HIT"
-                        trade.exit_price = price
-                        trade.reason = "TARGET"
-                        trade.closed_at = datetime.now().isoformat()
-
-                    elif price >= trade.stop_loss:
-                        trade.state = "STOPLOSS_HIT"
-                        trade.exit_price = price
-                        trade.reason = "STOPLOSS"
-                        trade.closed_at = datetime.now().isoformat()
-
-            trade.updated_at = datetime.now().isoformat()
+            trade.updated_at = datetime.now(UTC).isoformat()
 
             TradeCache.save(
                 trade=trade,
             )
+
         except Exception as exc:
+
             logger.warning(
                 "Trade monitor update failed for %s/%s/%s: %s",
                 exchange,

@@ -20,6 +20,13 @@ class PreTradeRiskEngine:
             )
             return False
 
+        if RiskLimits.loss_cooldown_reached():
+            print(
+                "Consecutive-loss cooldown active. "
+                "Skipping new trade."
+            )
+            return False
+
         if MaxOpenTradesPolicy.reached():
             print(
                 "Maximum open trades reached. "

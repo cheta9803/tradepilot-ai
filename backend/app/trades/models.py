@@ -66,3 +66,8 @@ class Trade:
     trail_started: bool = False
 
     breakeven_done: bool = False
+
+    # Identifies what kind of stop is currently active.
+    # This is used when a stop is hit so history can distinguish
+    # the original stop from a trailing or break-even stop.
+    stop_reason: str = "STOPLOSS"

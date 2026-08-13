@@ -1,6 +1,6 @@
 import json
 from dataclasses import asdict
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.db.redis import redis_client
 from app.trades.models import Trade
@@ -36,7 +36,7 @@ class TradeCache:
 
         data = asdict(trade)
 
-        data["updated_at"] = datetime.now().isoformat()
+        data["updated_at"] = datetime.now(UTC).isoformat()
 
         redis_client.set(
             cls._key(

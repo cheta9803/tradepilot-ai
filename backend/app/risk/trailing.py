@@ -11,31 +11,33 @@ class TrailingStop:
         trade: dict,
         ltp: float,
         atr: float,
-    ) -> None:
+    ) -> bool:
 
         if not settings.trailing_stop_enabled:
-            return
+            return False
 
         if atr <= 0:
-            return
+            return False
 
         state = trade["state"]
 
         if state == "BUY_ACTIVE":
 
-            cls._process_buy(
+            return cls._process_buy(
                 trade=trade,
                 ltp=ltp,
                 atr=atr,
             )
 
-        elif state == "SELL_ACTIVE":
+        if state == "SELL_ACTIVE":
 
-            cls._process_sell(
+            return cls._process_sell(
                 trade=trade,
                 ltp=ltp,
                 atr=atr,
             )
+
+        return False
 
     @classmethod
     def _process_buy(
@@ -44,7 +46,7 @@ class TrailingStop:
         trade: dict,
         ltp: float,
         atr: float,
-    ) -> None:
+    ) -> bool:
 
         highest = max(
             trade.get(
@@ -58,7 +60,7 @@ class TrailingStop:
             "highest_price",
             trade["entry_price"],
         ):
-            return
+            return False
 
         trailing_distance = (
             atr
@@ -71,7 +73,7 @@ class TrailingStop:
             new_stop - trade["stop_loss"]
             < settings.min_stop_move
         ):
-            return
+            return False
 
         TradeLifecycle.update(
             exchange=trade["exchange"],
@@ -81,8 +83,11 @@ class TrailingStop:
                 "highest_price": highest,
                 "stop_loss": round(new_stop, 2),
                 "trail_started": True,
+                "stop_reason": "TRAILING_STOP",
             },
         )
+
+        return True
 
     @classmethod
     def _process_sell(
@@ -91,7 +96,7 @@ class TrailingStop:
         trade: dict,
         ltp: float,
         atr: float,
-    ) -> None:
+    ) -> bool:
 
         lowest = min(
             trade.get(
@@ -105,7 +110,7 @@ class TrailingStop:
             "lowest_price",
             trade["entry_price"],
         ):
-            return
+            return False
 
         trailing_distance = (
             atr
@@ -118,7 +123,7 @@ class TrailingStop:
             trade["stop_loss"] - new_stop
             < settings.min_stop_move
         ):
-            return
+            return False
 
         TradeLifecycle.update(
             exchange=trade["exchange"],
@@ -128,5 +133,8 @@ class TrailingStop:
                 "lowest_price": lowest,
                 "stop_loss": round(new_stop, 2),
                 "trail_started": True,
+                "stop_reason": "TRAILING_STOP",
             },
         )
+
+        return True

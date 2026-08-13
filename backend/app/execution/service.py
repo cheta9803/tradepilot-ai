@@ -251,7 +251,9 @@ class ExecutionService:
                 exit_reason = "TARGET"
 
             elif ltp <= trade["stop_loss"]:
-                exit_reason = "STOPLOSS"
+                exit_reason = cls._stop_exit_reason(
+                    trade
+                )
 
         else:
 
@@ -259,7 +261,9 @@ class ExecutionService:
                 exit_reason = "TARGET"
 
             elif ltp >= trade["stop_loss"]:
-                exit_reason = "STOPLOSS"
+                exit_reason = cls._stop_exit_reason(
+                    trade
+                )
 
         if exit_reason is None:
             return
@@ -277,3 +281,25 @@ class ExecutionService:
                 f"{trade['symbol']} "
                 f"{exit_reason}"
             )
+
+    @staticmethod
+    def _stop_exit_reason(
+        trade: dict,
+    ) -> str:
+        """
+        Preserve the reason for the currently active stop.
+
+        The stop price alone cannot distinguish an initial stop from a
+        break-even or trailing stop because all of them are evaluated by
+        the same exit condition.
+        """
+
+        stop_reason = trade.get("stop_reason")
+
+        if stop_reason in (
+            "TRAILING_STOP",
+            "BREAKEVEN_STOP",
+        ):
+            return stop_reason
+
+        return "STOPLOSS"

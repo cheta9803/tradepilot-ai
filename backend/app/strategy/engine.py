@@ -176,6 +176,39 @@ class StrategyEngine:
             timeframe=timeframe,
         )
 
+        # The 1m signal is only considered an actual entry trigger when
+        # the latest completed 1m candle confirms direction with a strong
+        # price-action event. This keeps 15m -> 5m -> 1m alignment from
+        # turning every aligned indicator state into a new trade.
+        entry_trigger = False
+        entry_trigger_reason = None
+
+        if timeframe == "1m" and patterns:
+
+            if signal == StrategyRules.BUY:
+
+                if patterns.get("breakout"):
+                    entry_trigger = True
+                    entry_trigger_reason = "1m bullish breakout confirmed"
+
+                elif patterns.get("bullish_engulfing"):
+                    entry_trigger = True
+                    entry_trigger_reason = (
+                        "1m bullish engulfing confirmed"
+                    )
+
+            elif signal == StrategyRules.SELL:
+
+                if patterns.get("breakdown"):
+                    entry_trigger = True
+                    entry_trigger_reason = "1m bearish breakdown confirmed"
+
+                elif patterns.get("bearish_engulfing"):
+                    entry_trigger = True
+                    entry_trigger_reason = (
+                        "1m bearish engulfing confirmed"
+                    )
+
         position = PositionSizer.calculate(
             capital=settings.default_capital,
             entry=entry,
@@ -271,6 +304,8 @@ class StrategyEngine:
                 "invested": position["invested"],
                 "risk_amount": position["risk_amount"],
                 "reasons": reasons,
+                "entry_trigger": entry_trigger,
+                "entry_trigger_reason": entry_trigger_reason,
             },
         )
 

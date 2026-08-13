@@ -1,189 +1,208 @@
 from datetime import datetime, timedelta
 
 from app.risk.limits import RiskLimits
-from app.trades.cache import TradeCache
+from app.trades.history_repository import TradeHistoryRepository
+from app.core.config import settings
 
 
 def test_no_trades_returns_false():
 
-    original = TradeCache.get_all
+    original = (
+        TradeHistoryRepository.get_today_gross_loss
+    )
 
-    TradeCache.get_all = classmethod(
-        lambda cls: []
+    TradeHistoryRepository.get_today_gross_loss = (
+        classmethod(lambda cls: 0.0)
     )
 
     try:
 
-        assert RiskLimits.daily_loss_reached() is False
+        assert (
+            RiskLimits.daily_loss_reached()
+            is False
+        )
 
     finally:
 
-        TradeCache.get_all = original
+        TradeHistoryRepository.get_today_gross_loss = (
+            original
+        )
 
 
 def test_loss_below_limit_returns_false():
 
-    today = datetime.now().isoformat()
+    original = (
+        TradeHistoryRepository.get_today_gross_loss
+    )
 
-    trades = [
-        {
-            "closed_at": today,
-            "pnl": -500.0,
-        },
-        {
-            "closed_at": today,
-            "pnl": -700.0,
-        },
-    ]
-
-    original = TradeCache.get_all
-
-    TradeCache.get_all = classmethod(
-        lambda cls: trades
+    TradeHistoryRepository.get_today_gross_loss = (
+        classmethod(lambda cls: 1200.0)
     )
 
     try:
 
-        assert RiskLimits.daily_loss_reached() is False
+        assert (
+            RiskLimits.daily_loss_reached()
+            is False
+        )
 
     finally:
 
-        TradeCache.get_all = original
+        TradeHistoryRepository.get_today_gross_loss = (
+            original
+        )
 
 
 def test_loss_above_limit_returns_true():
 
-    today = datetime.now().isoformat()
+    original = (
+        TradeHistoryRepository.get_today_gross_loss
+    )
 
-    trades = [
-        {
-            "closed_at": today,
-            "pnl": -1000.0,
-        },
-        {
-            "closed_at": today,
-            "pnl": -1500.0,
-        },
-    ]
-
-    original = TradeCache.get_all
-
-    TradeCache.get_all = classmethod(
-        lambda cls: trades
+    TradeHistoryRepository.get_today_gross_loss = (
+        classmethod(lambda cls: 2500.0)
     )
 
     try:
 
-        assert RiskLimits.daily_loss_reached() is True
+        assert (
+            RiskLimits.daily_loss_reached()
+            is True
+        )
 
     finally:
 
-        TradeCache.get_all = original
+        TradeHistoryRepository.get_today_gross_loss = (
+            original
+        )
 
 
-def test_yesterday_loss_is_ignored():
+def test_loss_exactly_at_limit_returns_true():
 
-    yesterday = (
-        datetime.now() - timedelta(days=1)
-    ).isoformat()
+    original = (
+        TradeHistoryRepository.get_today_gross_loss
+    )
 
-    trades = [
-        {
-            "closed_at": yesterday,
-            "pnl": -5000.0,
-        },
-    ]
+    limit = 2000.0
 
-    original = TradeCache.get_all
-
-    TradeCache.get_all = classmethod(
-        lambda cls: trades
+    TradeHistoryRepository.get_today_gross_loss = (
+        classmethod(lambda cls: limit)
     )
 
     try:
 
-        assert RiskLimits.daily_loss_reached() is False
+        assert (
+            RiskLimits.daily_loss_reached()
+            is True
+        )
 
     finally:
 
-        TradeCache.get_all = original
+        TradeHistoryRepository.get_today_gross_loss = (
+            original
+        )
 
 
-def test_profit_is_ignored():
+def test_profit_does_not_reduce_gross_loss():
 
-    today = datetime.now().isoformat()
+    original = (
+        TradeHistoryRepository.get_today_gross_loss
+    )
 
-    trades = [
-        {
-            "closed_at": today,
-            "pnl": 5000.0,
-        },
-        {
-            "closed_at": today,
-            "pnl": 2500.0,
-        },
-    ]
-
-    original = TradeCache.get_all
-
-    TradeCache.get_all = classmethod(
-        lambda cls: trades
+    TradeHistoryRepository.get_today_gross_loss = (
+        classmethod(lambda cls: 1500.0)
     )
 
     try:
 
-        assert RiskLimits.daily_loss_reached() is False
+        assert (
+            RiskLimits.daily_loss_reached()
+            is False
+        )
 
     finally:
 
-        TradeCache.get_all = original
+        TradeHistoryRepository.get_today_gross_loss = (
+            original
+        )
 
 
-def test_invalid_closed_at_is_ignored():
+def test_large_gross_loss_triggers_limit():
 
-    trades = [
-        {
-            "closed_at": "invalid-date",
-            "pnl": -10000.0,
-        },
-    ]
+    original = (
+        TradeHistoryRepository.get_today_gross_loss
+    )
 
-    original = TradeCache.get_all
-
-    TradeCache.get_all = classmethod(
-        lambda cls: trades
+    TradeHistoryRepository.get_today_gross_loss = (
+        classmethod(lambda cls: 5000.0)
     )
 
     try:
 
-        assert RiskLimits.daily_loss_reached() is False
+        assert (
+            RiskLimits.daily_loss_reached()
+            is True
+        )
 
     finally:
 
-        TradeCache.get_all = original
+        TradeHistoryRepository.get_today_gross_loss = (
+            original
+        )
 
 
-def test_none_pnl_is_ignored():
+def test_three_consecutive_losses_start_cooldown():
 
-    today = datetime.now().isoformat()
+    original = TradeHistoryRepository.get_today_loss_streak
+    original_minutes = settings.cooldown_minutes
+    original_losses = settings.cooldown_after_losses
 
-    trades = [
-        {
-            "closed_at": today,
-            "pnl": None,
-        },
-    ]
+    TradeHistoryRepository.get_today_loss_streak = classmethod(
+        lambda cls: (3, datetime.now())
+    )
+    settings.cooldown_after_losses = 3
+    settings.cooldown_minutes = 30
 
-    original = TradeCache.get_all
+    try:
+        assert RiskLimits.loss_cooldown_reached() is True
+    finally:
+        TradeHistoryRepository.get_today_loss_streak = original
+        settings.cooldown_minutes = original_minutes
+        settings.cooldown_after_losses = original_losses
 
-    TradeCache.get_all = classmethod(
-        lambda cls: trades
+
+def test_profit_breaks_loss_streak():
+
+    original = TradeHistoryRepository.get_today_loss_streak
+
+    TradeHistoryRepository.get_today_loss_streak = classmethod(
+        lambda cls: (0, None)
     )
 
     try:
-
-        assert RiskLimits.daily_loss_reached() is False
-
+        assert RiskLimits.loss_cooldown_reached() is False
     finally:
+        TradeHistoryRepository.get_today_loss_streak = original
 
-        TradeCache.get_all = original
+
+def test_expired_loss_cooldown_allows_trade():
+
+    original = TradeHistoryRepository.get_today_loss_streak
+    original_minutes = settings.cooldown_minutes
+    original_losses = settings.cooldown_after_losses
+
+    TradeHistoryRepository.get_today_loss_streak = classmethod(
+        lambda cls: (
+            3,
+            datetime.now() - timedelta(minutes=31),
+        )
+    )
+    settings.cooldown_after_losses = 3
+    settings.cooldown_minutes = 30
+
+    try:
+        assert RiskLimits.loss_cooldown_reached() is False
+    finally:
+        TradeHistoryRepository.get_today_loss_streak = original
+        settings.cooldown_minutes = original_minutes
+        settings.cooldown_after_losses = original_losses

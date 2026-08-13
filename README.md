@@ -1,20 +1,33 @@
-# TradePilot backend history/live-indicator fix
+# TradePilot AI — 2026-08-14 trading-control update
 
-This patch is based on the latest `app(20260810-051312).zip`.
+Based on the latest backend and frontend ZIPs uploaded on 2026-08-13.
 
 ## Changes
-- Keep a 10-trading-day 1m warm-up instead of replacing history with only today's candles.
-- Increase the 1m history cache to 4000 candles.
-- Merge historical refresh data with existing cached candles.
-- Build 5m/15m/30m/1h candles by timestamp buckets instead of list position, avoiding overnight/session-crossing candles.
-- Recalculate indicators when cached indicators belong to an older candle, preventing stale indicators + today's LTP.
-- Add the source candle timestamp to indicator cache values.
-- Add a shared historical-request throttle and controlled Angel One rate-limit handling.
-- Return HTTP 429 for `/market/history/{symbol}` when Angel historical data is rate-limited.
+
+1. 15m -> 5m -> 1m alignment remains the core decision flow.
+2. A real completed-1m price-action trigger is now required:
+   - BUY: bullish breakout OR bullish engulfing.
+   - SELL: bearish breakdown OR bearish engulfing.
+3. Consecutive-loss cooldown is implemented using completed trade history.
+   - Default: 3 consecutive losses -> 30 minutes without new entries.
+   - A profitable or break-even trade resets the streak.
+4. Initial, break-even, and trailing stops now preserve their stop reason:
+   - STOPLOSS
+   - BREAKEVEN_STOP
+   - TRAILING_STOP
+5. P&L History renders Gross Loss explicitly with the loss/red class.
+6. P&L History displays readable exit-reason labels.
+7. Tests were extended for the new trigger, cooldown, and exit-reason behavior.
 
 ## Important
-Do NOT commit this patch immediately.
 
-After copying the files into the real backend, restart the backend and run the existing test suite first. Then verify INFY 5m and 15m during market hours.
+The current configuration already has a gross daily-loss limit of ₹2,000. Once today's gross realized loss reaches that limit, new trades remain blocked even if the scanner/dashboard shows opportunities.
 
-Do not change `loadLtp()` or the WebSocket code as part of this patch.
+These changes do not place or test live broker orders. They are intended to be installed and tested outside market hours first.
+
+## Files
+
+Backend: 14 complete files.
+Frontend: 3 complete files.
+
+The files are ready to copy over the corresponding paths in the project.

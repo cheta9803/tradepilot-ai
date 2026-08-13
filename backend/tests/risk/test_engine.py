@@ -2,6 +2,7 @@ from app.indicators.cache import IndicatorCache
 from app.risk.breakeven import BreakEvenStop
 from app.risk.engine import RiskEngine
 from app.risk.trailing import TrailingStop
+from app.trades.lifecycle import TradeLifecycle
 
 
 def test_engine_returns_when_indicators_missing():
@@ -66,6 +67,8 @@ def test_engine_passes_atr_to_trailing():
     def fake_trailing(**kwargs):
         captured.update(kwargs)
 
+        return False
+
     TrailingStop.process = fake_trailing
 
     original_be = BreakEvenStop.process
@@ -113,15 +116,18 @@ def test_engine_calls_all_risk_modules():
     original_trailing = TrailingStop.process
     original_be = BreakEvenStop.process
 
-    TrailingStop.process = lambda **kwargs: calls.__setitem__(
-        "trailing",
-        calls["trailing"] + 1,
-    )
+    def fake_trailing(**kwargs):
 
-    BreakEvenStop.process = lambda **kwargs: calls.__setitem__(
-        "breakeven",
-        calls["breakeven"] + 1,
-    )
+        calls["trailing"] += 1
+
+        return False
+
+    def fake_breakeven(**kwargs):
+
+        calls["breakeven"] += 1
+
+    TrailingStop.process = fake_trailing
+    BreakEvenStop.process = fake_breakeven
 
     try:
 
@@ -138,3 +144,67 @@ def test_engine_calls_all_risk_modules():
 
     assert calls["trailing"] == 1
     assert calls["breakeven"] == 1
+
+
+def test_engine_reloads_trade_after_trailing_change():
+
+    trade = {
+        "exchange": "NSE",
+        "token": "123",
+        "timeframe": "1m",
+        "state": "BUY_ACTIVE",
+        "entry_price": 100.0,
+        "stop_loss": 95.0,
+        "highest_price": 100.0,
+    }
+
+    latest_trade = {
+        **trade,
+        "stop_loss": 105.0,
+        "highest_price": 110.0,
+        "trail_started": True,
+    }
+
+    original_get = IndicatorCache.get
+    original_trailing = TrailingStop.process
+    original_trade_get = TradeLifecycle.get
+    original_breakeven = BreakEvenStop.process
+
+    IndicatorCache.get = classmethod(
+        lambda cls, **kwargs: {
+            "atr14": 5.0,
+        }
+    )
+
+    TrailingStop.process = lambda **kwargs: True
+
+    TradeLifecycle.get = classmethod(
+        lambda cls, **kwargs: latest_trade
+    )
+
+    captured = {}
+
+    def fake_breakeven(**kwargs):
+        captured.update(kwargs)
+
+    BreakEvenStop.process = fake_breakeven
+
+    try:
+
+        RiskEngine.process(
+            trade=trade,
+            ltp=110.0,
+        )
+
+    finally:
+
+        IndicatorCache.get = original_get
+        TrailingStop.process = original_trailing
+        TradeLifecycle.get = original_trade_get
+        BreakEvenStop.process = original_breakeven
+
+    assert captured["trade"] is latest_trade
+    assert captured["trade"]["stop_loss"] == 105.0
+    assert captured["trade"]["highest_price"] == 110.0
+    assert captured["ltp"] == 110.0
+    assert captured["atr"] == 5.0

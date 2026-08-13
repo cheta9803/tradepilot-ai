@@ -23,6 +23,7 @@ class BreakEvenStop:
             return
 
         entry = trade["entry_price"]
+        current_stop = trade["stop_loss"]
 
         trigger = (
             atr
@@ -34,15 +35,23 @@ class BreakEvenStop:
             if ltp < entry + trigger:
                 return
 
+            # Never move a BUY stop backwards.
+            if current_stop >= entry:
+                return
+
         elif trade["state"] == "SELL_ACTIVE":
 
             if ltp > entry - trigger:
                 return
 
+            # Never move a SELL stop backwards.
+            if current_stop <= entry:
+                return
+
         else:
             return
 
-        if abs(entry - trade["stop_loss"]) < settings.min_stop_move:
+        if abs(entry - current_stop) < settings.min_stop_move:
             return
 
         TradeLifecycle.update(
@@ -52,5 +61,6 @@ class BreakEvenStop:
             values={
                 "stop_loss": round(entry, 2),
                 "breakeven_done": True,
+                "stop_reason": "BREAKEVEN_STOP",
             },
         )

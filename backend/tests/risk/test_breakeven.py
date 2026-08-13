@@ -182,3 +182,74 @@ def test_does_not_execute_twice():
         TradeLifecycle.update = original
 
     assert updates == {}
+
+def test_buy_does_not_move_trailing_stop_back_to_entry():
+
+    trade = {
+        "exchange": "NSE",
+        "token": "123",
+        "timeframe": "1m",
+        "state": "BUY_ACTIVE",
+        "entry_price": 100.0,
+        "stop_loss": 105.0,
+        "breakeven_done": False,
+    }
+
+    updates = {}
+
+    original = TradeLifecycle.update
+
+    def fake_update(**kwargs):
+        updates.update(kwargs["values"])
+
+    TradeLifecycle.update = fake_update
+
+    try:
+
+        BreakEvenStop.process(
+            trade=trade,
+            ltp=110.0,
+            atr=5.0,
+        )
+
+    finally:
+
+        TradeLifecycle.update = original
+
+    assert updates == {}
+
+
+def test_sell_does_not_move_trailing_stop_back_to_entry():
+
+    trade = {
+        "exchange": "NSE",
+        "token": "123",
+        "timeframe": "1m",
+        "state": "SELL_ACTIVE",
+        "entry_price": 100.0,
+        "stop_loss": 95.0,
+        "breakeven_done": False,
+    }
+
+    updates = {}
+
+    original = TradeLifecycle.update
+
+    def fake_update(**kwargs):
+        updates.update(kwargs["values"])
+
+    TradeLifecycle.update = fake_update
+
+    try:
+
+        BreakEvenStop.process(
+            trade=trade,
+            ltp=90.0,
+            atr=5.0,
+        )
+
+    finally:
+
+        TradeLifecycle.update = original
+
+    assert updates == {}
