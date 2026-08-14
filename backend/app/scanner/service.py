@@ -12,6 +12,7 @@ from app.scanner.models import (
 from app.scanner.redis_cache import ScannerCache
 from app.scanner.universe import Nifty50Universe
 from app.strategy.cache import StrategyCache
+from app.strategy.execution_eligibility import TradeExecutionEligibility
 
 
 class ScannerService:
@@ -125,6 +126,22 @@ class ScannerService:
             "NO SIGNAL",
         )
 
+        execution_ready = False
+        execution_block_reason = None
+
+        if ai_score.get("trade_ready", False):
+            eligibility = TradeExecutionEligibility.evaluate(
+                exchange=instrument.exchange,
+                token=instrument.token,
+                trigger_candle_timestamp=ai_score.get(
+                    "entry_trigger_candle_timestamp"
+                ),
+            )
+            execution_ready = eligibility["execution_ready"]
+            execution_block_reason = eligibility[
+                "execution_block_reason"
+            ]
+
         reasons = list(
             ai_score.get(
                 "reasons",
@@ -191,6 +208,8 @@ class ScannerService:
                     False,
                 )
             ),
+            execution_ready=execution_ready,
+            execution_block_reason=execution_block_reason,
             entry=ai_score.get("entry"),
             stop_loss=ai_score.get("stop_loss"),
             target=ai_score.get("target"),

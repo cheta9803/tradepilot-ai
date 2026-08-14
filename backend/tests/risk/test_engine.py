@@ -54,10 +54,16 @@ def test_engine_passes_atr_to_trailing():
 
     original_get = IndicatorCache.get
 
-    IndicatorCache.get = classmethod(
-        lambda cls, **kwargs: {
+    indicator_kwargs = {}
+
+    def fake_indicator_get(cls, **kwargs):
+        indicator_kwargs.update(kwargs)
+        return {
             "atr14": 5.25,
         }
+
+    IndicatorCache.get = classmethod(
+        fake_indicator_get
     )
 
     captured = {}
@@ -90,6 +96,9 @@ def test_engine_passes_atr_to_trailing():
     assert captured["trade"] == trade
     assert captured["ltp"] == 150.0
     assert captured["atr"] == 5.25
+
+    # Execution uses the 5m risk timeframe instead of 1m noise.
+    assert indicator_kwargs["timeframe"] == "5m"
 
 
 def test_engine_calls_all_risk_modules():

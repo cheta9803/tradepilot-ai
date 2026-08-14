@@ -46,7 +46,7 @@ export class AiOpportunities {
     }
 
     decision(o: AiOpportunity): string {
-        return o.trade_ready ? 'TRADE' : 'WAIT';
+        return o.execution_ready ? 'TRADE' : 'WAIT';
     }
 
     openDetails(o: AiOpportunity): void {

@@ -62,6 +62,15 @@ class TrailingStop:
         ):
             return False
 
+        favorable_move = ltp - trade["entry_price"]
+        minimum_move = (
+            atr
+            * settings.trailing_start_atr_multiplier
+        )
+
+        if favorable_move < minimum_move:
+            return False
+
         trailing_distance = (
             atr
             * settings.trailing_atr_multiplier
@@ -110,6 +119,15 @@ class TrailingStop:
             "lowest_price",
             trade["entry_price"],
         ):
+            return False
+
+        favorable_move = trade["entry_price"] - ltp
+        minimum_move = (
+            atr
+            * settings.trailing_start_atr_multiplier
+        )
+
+        if favorable_move < minimum_move:
             return False
 
         trailing_distance = (

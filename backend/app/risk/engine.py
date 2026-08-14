@@ -18,7 +18,7 @@ class RiskEngine:
         indicators = IndicatorCache.get(
             exchange=trade["exchange"],
             token=trade["token"],
-            timeframe=trade["timeframe"],
+            timeframe=trade.get("risk_timeframe") or "5m",
         )
 
         if indicators is None:

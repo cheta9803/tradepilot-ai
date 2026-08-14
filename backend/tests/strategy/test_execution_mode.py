@@ -119,7 +119,7 @@ def test_master_trade_uses_paper_execution_mode(
 
     monkeypatch.setattr(
         "app.strategy.engine.PreTradeRiskEngine.can_open_trade",
-        lambda: True,
+        lambda **kwargs: True,
     )
 
     created = {}
@@ -146,3 +146,46 @@ def test_master_trade_uses_paper_execution_mode(
     assert created["execution_mode"] == "PAPER"
     assert created["signal"] == "BUY"
     assert created["state"] == "ENTRY_READY"
+
+def test_trigger_is_consumed_when_latest_trade_closed_after_trigger(monkeypatch):
+
+    class LatestTrade:
+        closed_at = datetime.fromisoformat(
+            "2026-08-14T10:01:00+05:30"
+        )
+
+    monkeypatch.setattr(
+        "app.strategy.engine.TradeHistoryRepository.get_latest_closed_trade",
+        lambda **kwargs: LatestTrade(),
+    )
+
+    assert (
+        StrategyEngine._trigger_already_consumed(
+            exchange="NSE",
+            token="123",
+            trigger_candle_timestamp="2026-08-14T10:00:00+05:30",
+        )
+        is True
+    )
+
+
+def test_trigger_is_fresh_when_newer_than_latest_trade(monkeypatch):
+
+    class LatestTrade:
+        closed_at = datetime.fromisoformat(
+            "2026-08-14T09:59:00+05:30"
+        )
+
+    monkeypatch.setattr(
+        "app.strategy.engine.TradeHistoryRepository.get_latest_closed_trade",
+        lambda **kwargs: LatestTrade(),
+    )
+
+    assert (
+        StrategyEngine._trigger_already_consumed(
+            exchange="NSE",
+            token="123",
+            trigger_candle_timestamp="2026-08-14T10:00:00+05:30",
+        )
+        is False
+    )

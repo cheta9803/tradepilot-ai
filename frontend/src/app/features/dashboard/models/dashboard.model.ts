@@ -57,6 +57,8 @@ export interface ScannerOpportunity {
   recommendations_available?: boolean;
 
   trade_ready?: boolean;
+  execution_ready?: boolean;
+  execution_block_reason?: string | null;
   direction?: string;
 
   entry?: number;
@@ -91,6 +93,8 @@ export interface AiOpportunity {
   timeframes?: Record<string, string>;
   timeframe_confidences?: Record<string, number>;
   trade_ready?: boolean;
+  execution_ready?: boolean;
+  execution_block_reason?: string | null;
   direction?: string;
 
   updated_at?: string;

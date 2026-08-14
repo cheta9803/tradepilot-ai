@@ -25,6 +25,7 @@ class TradeLifecycle:
         target: float,
         quantity: int,
         execution_mode: str = "PAPER",
+        risk_timeframe: str = "5m",
     ) -> None:
 
         existing = TradeCache.get(
@@ -69,6 +70,7 @@ class TradeLifecycle:
             token=token,
             symbol=symbol,
             timeframe=timeframe,
+            risk_timeframe=risk_timeframe,
             state=state,
             signal=signal,
             entry_price=entry,

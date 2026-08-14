@@ -19,6 +19,8 @@ class TestMultiTimeframeStrategy:
             "atr14": atr,
             "entry_trigger": entry_trigger,
             "entry_trigger_reason": entry_trigger_reason,
+            "resistance": None,
+            "support": None,
         }
 
     def test_buy_requires_15m_direction_5m_setup_and_1m_trigger(self, monkeypatch):
@@ -137,3 +139,96 @@ class TestMultiTimeframeStrategy:
         assert result["recommendation"] == "WAIT"
         assert result["trade_ready"] is False
         assert result["signals"]["1m"] == "UNKNOWN"
+
+
+def test_resistance_before_target_means_wait(monkeypatch):
+
+    values = {
+        "15m": {
+            "signal": "BUY",
+            "confidence": 85,
+            "entry": 100.0,
+            "atr14": 2.0,
+            "entry_trigger": False,
+            "resistance": 108.0,
+            "support": 95.0,
+        },
+        "5m": {
+            "signal": "BUY",
+            "confidence": 80,
+            "entry": 100.0,
+            "atr14": 3.0,
+            "entry_trigger": False,
+            "resistance": 104.0,
+            "support": 97.0,
+        },
+        "1m": {
+            "signal": "BUY",
+            "confidence": 80,
+            "entry": 101.0,
+            "atr14": 1.0,
+            "entry_trigger": True,
+            "entry_trigger_reason": "1m bullish breakout confirmed",
+            "resistance": 103.0,
+            "support": 99.0,
+        },
+    }
+
+    monkeypatch.setattr(
+        "app.strategy.multi_timeframe.StrategyCache.get",
+        lambda **kwargs: values.get(kwargs["timeframe"]),
+    )
+
+    result = MultiTimeframeStrategy.calculate(
+        exchange="NSE",
+        token="123",
+    )
+
+    assert result["recommendation"] == "WAIT"
+    assert result["trade_ready"] is False
+    assert "too close" in result["reasons"][0].lower()
+
+
+def test_trade_ready_carries_1m_trigger_candle_timestamp(monkeypatch):
+
+    values = {
+        "15m": {
+            "signal": "BUY",
+            "confidence": 80,
+            "entry": 100.0,
+            "atr14": 2.0,
+            "entry_trigger": False,
+        },
+        "5m": {
+            "signal": "BUY",
+            "confidence": 75,
+            "entry": 100.0,
+            "atr14": 3.0,
+            "entry_trigger": False,
+        },
+        "1m": {
+            "signal": "BUY",
+            "confidence": 80,
+            "entry": 101.0,
+            "atr14": 2.0,
+            "entry_trigger": True,
+            "entry_trigger_reason": "1m bullish breakout confirmed",
+            "candle_timestamp": "2026-08-14T10:00:00+05:30",
+        },
+    }
+
+    monkeypatch.setattr(
+        "app.strategy.multi_timeframe.StrategyCache.get",
+        lambda **kwargs: values.get(kwargs["timeframe"]),
+    )
+
+    result = MultiTimeframeStrategy.calculate(
+        exchange="NSE",
+        token="123",
+    )
+
+    assert result["trade_ready"] is True
+    assert (
+        result["entry_trigger_candle_timestamp"]
+        == "2026-08-14T10:00:00+05:30"
+    )

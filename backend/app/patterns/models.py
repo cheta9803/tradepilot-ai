@@ -29,3 +29,5 @@ class PatternResult:
     higher_high: bool = False
 
     lower_low: bool = False
+
+    candle_timestamp: str | None = None

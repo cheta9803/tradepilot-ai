@@ -3,35 +3,54 @@ from app.risk.limits import RiskLimits
 
 
 class PreTradeRiskEngine:
-    """
-    Evaluates whether a new trade is allowed.
-
-    This engine performs all account-level checks
-    before a trade is created.
-    """
+    """Evaluate account-level checks before a new trade is created."""
 
     @classmethod
-    def can_open_trade(cls) -> bool:
-
+    def evaluate(
+        cls,
+        *,
+        exchange: str | None = None,
+        token: str | None = None,
+    ) -> tuple[bool, str | None]:
         if RiskLimits.daily_loss_reached():
-            print(
-                "Daily loss limit reached. "
-                "Skipping new trade."
+            return (
+                False,
+                "Daily loss limit reached. New trades are blocked.",
             )
-            return False
 
         if RiskLimits.loss_cooldown_reached():
-            print(
-                "Consecutive-loss cooldown active. "
-                "Skipping new trade."
+            return (
+                False,
+                "Consecutive-loss cooldown active. New trades are blocked.",
             )
-            return False
+
+        if exchange is not None and token is not None:
+            if RiskLimits.symbol_loss_cooldown_reached(
+                exchange=exchange,
+                token=token,
+            ):
+                return (
+                    False,
+                    "Symbol loss cooldown active. New trades are blocked.",
+                )
 
         if MaxOpenTradesPolicy.reached():
-            print(
-                "Maximum open trades reached. "
-                "Skipping new trade."
+            return (
+                False,
+                "Maximum open trades reached. New trades are blocked.",
             )
-            return False
 
-        return True
+        return True, None
+
+    @classmethod
+    def can_open_trade(
+        cls,
+        *,
+        exchange: str | None = None,
+        token: str | None = None,
+    ) -> bool:
+        allowed, _ = cls.evaluate(
+            exchange=exchange,
+            token=token,
+        )
+        return allowed

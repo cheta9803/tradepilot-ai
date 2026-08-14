@@ -37,6 +37,47 @@ class RiskLimits:
             >= settings.max_daily_loss
         )
 
+
+    @classmethod
+    def symbol_loss_cooldown_reached(
+        cls,
+        *,
+        exchange: str,
+        token: str,
+    ) -> bool:
+        """Block rapid re-entry on a symbol after its latest trade lost money."""
+
+        cooldown_minutes = settings.symbol_loss_cooldown_minutes
+
+        if cooldown_minutes <= 0:
+            return False
+
+        latest = TradeHistoryRepository.get_latest_closed_trade(
+            exchange=exchange,
+            token=token,
+            timeframe="1m",
+        )
+
+        if latest is None or float(latest.pnl or 0.0) >= 0:
+            return False
+
+        closed_at = latest.closed_at
+
+        if closed_at is None:
+            return False
+
+        now = datetime.now(
+            closed_at.tzinfo
+            if closed_at.tzinfo is not None
+            else None
+        )
+
+        elapsed_seconds = (
+            now - closed_at
+        ).total_seconds()
+
+        return elapsed_seconds < cooldown_minutes * 60
+
     @classmethod
     def loss_cooldown_reached(cls) -> bool:
         """

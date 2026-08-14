@@ -229,6 +229,36 @@ class TradeHistoryRepository:
         finally:
             db.close()
 
+
+    @classmethod
+    def get_latest_closed_trade(
+        cls,
+        *,
+        exchange: str,
+        token: str,
+        timeframe: str,
+    ) -> TradeHistory | None:
+        """Return the most recent completed trade for an instrument/timeframe."""
+
+        db = SessionLocal()
+
+        try:
+            return (
+                db.query(TradeHistory)
+                .filter(
+                    TradeHistory.exchange == exchange,
+                    TradeHistory.token == token,
+                    TradeHistory.timeframe == timeframe,
+                )
+                .order_by(
+                    TradeHistory.closed_at.desc(),
+                    TradeHistory.id.desc(),
+                )
+                .first()
+            )
+        finally:
+            db.close()
+
     @classmethod
     def get_daily_pnl(
         cls,

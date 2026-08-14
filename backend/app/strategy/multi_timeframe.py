@@ -1,4 +1,5 @@
 from app.strategy.cache import StrategyCache
+from app.strategy.entry_location import EntryLocationFilter
 from app.strategy.risk import RiskManager
 
 
@@ -146,6 +147,21 @@ class MultiTimeframeStrategy:
             atr=atr_5m,
         )
 
+        location = EntryLocationFilter.evaluate(
+            signal=direction,
+            entry=entry,
+            target=target,
+            atr_5m=atr_5m,
+            strategies=strategies,
+        )
+
+        if not location["allowed"]:
+            return cls._wait_result(
+                signals=signals,
+                confidences=confidences,
+                reason=location["reason"],
+            )
+
         reasons = [
             "15m bias aligned",
             "5m setup aligned",
@@ -153,6 +169,7 @@ class MultiTimeframeStrategy:
             "1m price-action entry trigger confirmed",
             "Stop-loss based on 5m ATR",
             "Risk/reward = 1:2",
+            location["reason"],
         ]
 
         if entry_strategy.get("entry_trigger_reason"):
@@ -176,6 +193,10 @@ class MultiTimeframeStrategy:
             "entry_trigger_reason": entry_strategy.get(
                 "entry_trigger_reason"
             ),
+            "entry_trigger_candle_timestamp": entry_strategy.get(
+                "candle_timestamp"
+            ),
+            "location_filter": location,
             "reasons": reasons,
         }
 
@@ -200,5 +221,7 @@ class MultiTimeframeStrategy:
             "atr_5m": None,
             "entry_trigger": False,
             "entry_trigger_reason": None,
+            "entry_trigger_candle_timestamp": None,
+            "location_filter": None,
             "reasons": [reason],
         }

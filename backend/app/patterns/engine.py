@@ -36,6 +36,8 @@ class PatternEngine:
             candles
         )
 
+        result.candle_timestamp = candles[-1].timestamp.isoformat()
+
         PatternCache.save(
             exchange=exchange,
             token=token,

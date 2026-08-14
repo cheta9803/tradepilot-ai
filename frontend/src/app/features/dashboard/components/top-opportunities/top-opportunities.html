@@ -35,7 +35,13 @@
                                 [class.medium]="setup(o) === 'Medium'"
                                 [class.conflict]="setup(o) === 'Conflict'">{{ setup(o) }}</span></td>
                             <td><span class="confidence">{{ o.confidence ?? 0 }}%</span></td>
-                            <td><span class="decision" [class.trade]="decision(o) === 'TRADE'">{{ decision(o) }}</span></td>
+                            <td>
+                                <span class="decision"
+                                    [class.trade]="decision(o) === 'TRADE'"
+                                    [title]="o.execution_block_reason || ''">
+                                    {{ decision(o) }}
+                                </span>
+                            </td>
                         </tr>
                     }
                 </tbody>

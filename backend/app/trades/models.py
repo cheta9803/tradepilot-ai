@@ -13,7 +13,7 @@ class Trade:
 
     timeframe: str
 
-    risk_timeframe: str = "1m"
+    risk_timeframe: str = "5m"
 
     state: str = ""
 

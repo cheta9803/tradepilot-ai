@@ -62,6 +62,10 @@ class ScannerResult:
 
     trade_ready: bool = False
 
+    execution_ready: bool = False
+
+    execution_block_reason: str | None = None
+
     entry: float | None = None
 
     stop_loss: float | None = None

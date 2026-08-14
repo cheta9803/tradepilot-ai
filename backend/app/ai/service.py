@@ -4,6 +4,7 @@ from app.instruments.cache import InstrumentCache
 from app.ai.timeframe_confirmation import TimeframeConfirmation
 from app.patterns.cache import PatternCache
 from app.strategy.cache import StrategyCache
+from app.strategy.execution_eligibility import TradeExecutionEligibility
 
 
 class AIService:
@@ -87,6 +88,31 @@ class AIService:
                 else "NONE"
             )
             score["trade_ready"] = master_ready
+
+            execution_ready = False
+            execution_block_reason = None
+
+            if master_ready:
+                eligibility = TradeExecutionEligibility.evaluate(
+                    exchange=exchange,
+                    token=token,
+                    trigger_candle_timestamp=confirmation.get(
+                        "entry_trigger_candle_timestamp"
+                    ),
+                )
+                execution_ready = eligibility["execution_ready"]
+                execution_block_reason = eligibility[
+                    "execution_block_reason"
+                ]
+
+            score["execution_ready"] = execution_ready
+            score["execution_block_reason"] = execution_block_reason
+
+            if execution_block_reason:
+                score["reasons"].append(
+                    f"Execution blocked: {execution_block_reason}"
+                )
+
             score["timeframes"] = confirmation["signals"]
             score["timeframe_confidences"] = confirmation[
                 "confidences"
@@ -130,6 +156,8 @@ class AIService:
                 "recommendation": "NO SIGNAL",
                 "direction": "NONE",
                 "trade_ready": False,
+                "execution_ready": False,
+                "execution_block_reason": "No strategy data available",
                 "reasons": ["No strategy data available"],
                 "timeframes": {},
             }

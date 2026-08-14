@@ -135,3 +135,93 @@ def test_get_daily_pnl():
 
         finally:
             db.close()
+
+def test_get_latest_closed_trade():
+
+    test_order_ids = [
+        "TEST-LATEST-1",
+        "TEST-LATEST-2",
+    ]
+
+    test_date_1 = datetime(
+        2099,
+        1,
+        1,
+        10,
+        0,
+        tzinfo=timezone.utc,
+    )
+    test_date_2 = datetime(
+        2099,
+        1,
+        1,
+        10,
+        5,
+        tzinfo=timezone.utc,
+    )
+
+    db = SessionLocal()
+
+    try:
+        db.query(TradeHistory).filter(
+            TradeHistory.order_id.in_(test_order_ids)
+        ).delete(synchronize_session=False)
+
+        db.add_all(
+            [
+                TradeHistory(
+                    exchange="NSE",
+                    token="TEST-LATEST",
+                    symbol="TEST-LATEST",
+                    timeframe="1m",
+                    signal="BUY",
+                    quantity=10,
+                    entry_price=100.0,
+                    exit_price=99.0,
+                    pnl=-10.0,
+                    reason="STOPLOSS",
+                    opened_at=test_date_1,
+                    closed_at=test_date_1,
+                    order_id=test_order_ids[0],
+                    execution_mode="PAPER",
+                ),
+                TradeHistory(
+                    exchange="NSE",
+                    token="TEST-LATEST",
+                    symbol="TEST-LATEST",
+                    timeframe="1m",
+                    signal="BUY",
+                    quantity=10,
+                    entry_price=100.0,
+                    exit_price=102.0,
+                    pnl=20.0,
+                    reason="TARGET",
+                    opened_at=test_date_2,
+                    closed_at=test_date_2,
+                    order_id=test_order_ids[1],
+                    execution_mode="PAPER",
+                ),
+            ]
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    try:
+        latest = TradeHistoryRepository.get_latest_closed_trade(
+            exchange="NSE",
+            token="TEST-LATEST",
+            timeframe="1m",
+        )
+        assert latest is not None
+        assert latest.order_id == "TEST-LATEST-2"
+        assert latest.pnl == 20.0
+    finally:
+        db = SessionLocal()
+        try:
+            db.query(TradeHistory).filter(
+                TradeHistory.order_id.in_(test_order_ids)
+            ).delete(synchronize_session=False)
+            db.commit()
+        finally:
+            db.close()

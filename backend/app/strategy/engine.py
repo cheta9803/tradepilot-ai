@@ -7,6 +7,7 @@ from app.live.redis_cache import LiveCache
 from app.history.redis_cache import HistoryCache
 from app.pretrade.engine import PreTradeRiskEngine
 from app.strategy.cache import StrategyCache
+from app.strategy.execution_eligibility import TradeExecutionEligibility
 from app.strategy.multi_timeframe import MultiTimeframeStrategy
 from app.strategy.position import PositionSizer
 from app.strategy.risk import RiskManager
@@ -15,10 +16,55 @@ from app.strategy.state import TradeState
 from app.strategy.trend import TrendService
 from app.trades.cache import TradeCache
 from app.trades.lifecycle import TradeLifecycle
+from app.trades.history_repository import TradeHistoryRepository
 from app.patterns.cache import PatternCache
 
 
 class StrategyEngine:
+
+    @classmethod
+    def _trigger_already_consumed(
+        cls,
+        *,
+        exchange: str,
+        token: str,
+        trigger_candle_timestamp: str | None,
+    ) -> bool:
+        """Return True when the latest 1m trigger was already consumed.
+
+        This compatibility wrapper keeps the trigger-consumption behavior
+        available on StrategyEngine while the dashboard/execution eligibility
+        logic lives in TradeExecutionEligibility. Existing strategy tests and
+        callers can continue to exercise this behavior without duplicating the
+        actual comparison logic elsewhere.
+        """
+        if not trigger_candle_timestamp:
+            return False
+
+        latest_closed = TradeHistoryRepository.get_latest_closed_trade(
+            exchange=exchange,
+            token=token,
+            timeframe="1m",
+        )
+
+        if latest_closed is None or latest_closed.closed_at is None:
+            return False
+
+        from datetime import UTC, datetime
+
+        trigger_at = datetime.fromisoformat(
+            trigger_candle_timestamp,
+        )
+
+        if trigger_at.tzinfo is None:
+            trigger_at = trigger_at.replace(tzinfo=UTC)
+
+        closed_at = latest_closed.closed_at
+
+        if closed_at.tzinfo is None:
+            closed_at = closed_at.replace(tzinfo=UTC)
+
+        return closed_at >= trigger_at
 
     @classmethod
     def calculate(
@@ -306,6 +352,12 @@ class StrategyEngine:
                 "reasons": reasons,
                 "entry_trigger": entry_trigger,
                 "entry_trigger_reason": entry_trigger_reason,
+                "candle_timestamp": latest_timestamp,
+                "support": patterns.get("support") if patterns else None,
+                "resistance": patterns.get("resistance") if patterns else None,
+                "pattern_candle_timestamp": (
+                    patterns.get("candle_timestamp") if patterns else None
+                ),
             },
         )
 
@@ -376,9 +428,18 @@ class StrategyEngine:
             )
             return
 
-        if not PreTradeRiskEngine.can_open_trade():
+        eligibility = TradeExecutionEligibility.evaluate(
+            exchange=exchange,
+            token=token,
+            trigger_candle_timestamp=master.get(
+                "entry_trigger_candle_timestamp"
+            ),
+        )
+
+        if not eligibility["execution_ready"]:
             print(
-                f"Risk check failed {instrument.symbol} master 1m"
+                f"Execution blocked {instrument.symbol} master 1m: "
+                f"{eligibility['execution_block_reason']}"
             )
             return
 
@@ -398,6 +459,7 @@ class StrategyEngine:
                 if settings.paper_trading
                 else "LIVE"
             ),
+            risk_timeframe="5m",
         )
 
         print(

@@ -206,3 +206,75 @@ def test_expired_loss_cooldown_allows_trade():
         TradeHistoryRepository.get_today_loss_streak = original
         settings.cooldown_minutes = original_minutes
         settings.cooldown_after_losses = original_losses
+
+
+def test_symbol_loss_cooldown_blocks_recent_losing_trade(monkeypatch):
+
+    class LatestTrade:
+        pnl = -100.0
+        closed_at = datetime.now()
+
+    monkeypatch.setattr(
+        "app.risk.limits.TradeHistoryRepository.get_latest_closed_trade",
+        lambda **kwargs: LatestTrade(),
+    )
+
+    original = settings.symbol_loss_cooldown_minutes
+    settings.symbol_loss_cooldown_minutes = 15
+
+    try:
+        assert (
+            RiskLimits.symbol_loss_cooldown_reached(
+                exchange="NSE",
+                token="123",
+            )
+            is True
+        )
+    finally:
+        settings.symbol_loss_cooldown_minutes = original
+
+
+def test_symbol_loss_cooldown_allows_after_expiry(monkeypatch):
+
+    class LatestTrade:
+        pnl = -100.0
+        closed_at = datetime.now() - timedelta(minutes=16)
+
+    monkeypatch.setattr(
+        "app.risk.limits.TradeHistoryRepository.get_latest_closed_trade",
+        lambda **kwargs: LatestTrade(),
+    )
+
+    original = settings.symbol_loss_cooldown_minutes
+    settings.symbol_loss_cooldown_minutes = 15
+
+    try:
+        assert (
+            RiskLimits.symbol_loss_cooldown_reached(
+                exchange="NSE",
+                token="123",
+            )
+            is False
+        )
+    finally:
+        settings.symbol_loss_cooldown_minutes = original
+
+
+def test_symbol_loss_cooldown_does_not_block_after_profit(monkeypatch):
+
+    class LatestTrade:
+        pnl = 100.0
+        closed_at = datetime.now()
+
+    monkeypatch.setattr(
+        "app.risk.limits.TradeHistoryRepository.get_latest_closed_trade",
+        lambda **kwargs: LatestTrade(),
+    )
+
+    assert (
+        RiskLimits.symbol_loss_cooldown_reached(
+            exchange="NSE",
+            token="123",
+        )
+        is False
+    )

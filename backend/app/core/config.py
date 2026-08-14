@@ -61,6 +61,10 @@ class Settings(BaseSettings):
 
     trailing_atr_multiplier: float = 1.0
 
+    # Do not trail the position until it has moved meaningfully in our favor.
+    # This avoids turning normal 1m/5m pullbacks into premature exits.
+    trailing_start_atr_multiplier: float = 1.5
+
     breakeven_enabled: bool = True
 
     breakeven_atr_multiplier: float = 1.0
@@ -72,6 +76,16 @@ class Settings(BaseSettings):
     cooldown_after_losses: int = 3
 
     cooldown_minutes: int = 30
+
+    # After a losing trade, pause new entries for the same symbol.
+    # This is intentionally shorter than the account-wide loss cooldown.
+    symbol_loss_cooldown_minutes: int = 15
+
+    # Entry-location filter. A BUY/SELL is rejected when the nearest
+    # 5m/15m resistance/support leaves less room than the planned target
+    # plus a small volatility buffer.
+    entry_location_filter_enabled: bool = True
+    entry_location_buffer_atr_multiplier: float = 0.25
 
     # -------------------------
     # Break-even Stop
