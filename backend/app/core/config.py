@@ -53,6 +53,12 @@ class Settings(BaseSettings):
 
     live_trading_enabled: bool = False
 
+    # Angel market WebSocket reliability. The SDK connection is supervised
+    # by TradePilot so a disconnect does not silently stop market processing.
+    live_ws_reconnect_initial_seconds: int = 5
+    live_ws_reconnect_max_seconds: int = 60
+    live_ws_heartbeat_timeout_seconds: int = 45
+
     market_close_hour: int = 15
 
     market_close_minute: int = 20

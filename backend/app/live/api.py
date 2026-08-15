@@ -43,6 +43,14 @@ def unsubscribe(
 
 
 @router.get(
+    "/health/status",
+)
+def get_live_health():
+
+    return live_manager.health()
+
+
+@router.get(
     "/{token}",
     response_model=LivePriceResponse,
 )
