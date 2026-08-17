@@ -19,6 +19,14 @@ class RiskLimits:
         return
 
     @classmethod
+    def daily_trade_limit_reached(cls) -> bool:
+        """Prevent excessive completed trades in one session."""
+        limit = settings.max_daily_trades
+        if limit <= 0:
+            return False
+        return TradeHistoryRepository.get_today_trade_count() >= limit
+
+    @classmethod
     def daily_loss_reached(cls) -> bool:
         """
         Returns True if today's gross realized loss

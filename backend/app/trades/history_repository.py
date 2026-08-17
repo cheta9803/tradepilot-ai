@@ -100,6 +100,26 @@ class TradeHistoryRepository:
         return start, end
 
     @classmethod
+    def get_today_trade_count(cls) -> int:
+        """Return the number of completed trades closed during today's market day."""
+        from sqlalchemy import func
+
+        start, end = cls._today_window()
+        db = SessionLocal()
+        try:
+            result = (
+                db.query(func.count(TradeHistory.id))
+                .filter(
+                    TradeHistory.closed_at >= start,
+                    TradeHistory.closed_at < end,
+                )
+                .scalar()
+            )
+            return int(result or 0)
+        finally:
+            db.close()
+
+    @classmethod
     def get_today_realized_pnl(
         cls,
     ) -> float:

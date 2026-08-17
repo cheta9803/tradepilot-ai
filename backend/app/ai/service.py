@@ -108,6 +108,17 @@ class AIService:
             score["execution_ready"] = execution_ready
             score["execution_block_reason"] = execution_block_reason
 
+            if not master_ready:
+                # The dashboard previously showed e.g. 84% + WAIT but
+                # execution_block_reason was null, so the user could not
+                # see why the MTF gate rejected the setup. Surface the first
+                # concrete strategy wait reason as the tooltip/block reason.
+                wait_reason = (
+                    confirmation.get("reasons") or ["Strategy is not trade-ready."]
+                )[0]
+                execution_block_reason = wait_reason
+                score["execution_block_reason"] = wait_reason
+
             if execution_block_reason:
                 score["reasons"].append(
                     f"Execution blocked: {execution_block_reason}"

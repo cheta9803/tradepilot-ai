@@ -78,6 +78,30 @@ def test_health_exposes_connection_generation_and_client():
     assert health["state"] == "CONNECTED"
 
 
+def test_mark_connected_resets_tick_timestamp_for_new_connection():
+    live = LiveClient()
+    live.last_tick_at = 123.0
+    live.last_disconnected_at = 456.0
+    live.mark_connected()
+    assert live.last_tick_at is None
+    assert live.last_disconnected_at is None
+    assert live.last_connected_at is not None
+    assert live.last_pong_at is not None
+    assert live._tick_grace_until is not None
+
+
+def test_health_ignores_stale_sdk_pong_from_previous_connection():
+    live = LiveClient()
+    live._generation = 2
+    live.client = SimpleNamespace(last_pong_timestamp=100.0)
+    live.mark_connected()
+    connected_at = live.last_connected_at
+    live.last_pong_at = connected_at
+    health = live.health()
+    assert health["last_pong_age_seconds"] is not None
+    assert health["last_pong_age_seconds"] < 1.0
+
+
 def test_close_invalidates_current_connection():
     live = LiveClient()
     live._generation = 4

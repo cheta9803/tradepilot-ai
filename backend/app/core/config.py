@@ -77,6 +77,9 @@ class Settings(BaseSettings):
 
     max_open_trades: int = 5
 
+    # Hard cap on completed trades per trading day to prevent overtrading.
+    max_daily_trades: int = 8
+
     max_daily_loss: float = 2000.0
 
     cooldown_after_losses: int = 3
@@ -92,6 +95,15 @@ class Settings(BaseSettings):
     # plus a small volatility buffer.
     entry_location_filter_enabled: bool = True
     entry_location_buffer_atr_multiplier: float = 0.25
+
+    # Reject entries that are already too far from the 5m EMA20.
+    # This is a no-chasing guard, not a trend filter.
+    no_chase_filter_enabled: bool = True
+    no_chase_max_atr_from_ema20: float = 1.0
+
+    # Breakouts naturally move away from EMA20; allow a little more room
+    # only when the confirmed 1m trigger is an actual breakout.
+    no_chase_breakout_max_atr_from_ema20: float = 1.25
 
     # -------------------------
     # Break-even Stop

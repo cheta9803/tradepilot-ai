@@ -12,6 +12,12 @@ class PreTradeRiskEngine:
         exchange: str | None = None,
         token: str | None = None,
     ) -> tuple[bool, str | None]:
+        if RiskLimits.daily_trade_limit_reached():
+            return (
+                False,
+                "Maximum completed trades for today reached. New trades are blocked.",
+            )
+
         if RiskLimits.daily_loss_reached():
             return (
                 False,

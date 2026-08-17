@@ -1,51 +1,33 @@
-# TradePilot AI — Live Feed Reliability Update
+# TradePilot Strategy Hardening v2.1
 
-This update strengthens the Angel One market-data WebSocket lifecycle.
+Overlay patch for TradePilot after Strategy Hardening v1/v2.
 
-## Changes
+## Fixes in v2.1
 
-- Supervises the Angel WebSocket in a dedicated reconnect loop.
-- Recreates the SmartWebSocketV2 object after disconnects.
-- Uses exponential reconnect backoff (5s → 10s → 20s → 40s → 60s max by default).
-- Disables the SDK's internal retry so TradePilot owns reconnect state.
-- Re-subscribes the required instruments through the existing `on_open` flow.
-- Adds heartbeat watchdog: stale heartbeat forces a reconnect.
-- Tracks connection, last tick, last pong, reconnect attempts and last error.
-- Adds `GET /api/v1/live/health/status` for live-feed diagnostics.
-- Adds unit tests for connection health and reconnect supervision.
+1. **Restore explicit RSI extreme rejection**
+   - A BUY at RSI >= 70 is forced to HOLD even if other indicators produce a 4/5 bullish majority.
+   - A SELL at RSI <= 30 is forced to HOLD for the same reason.
+   - This fixes `test_strategy_rejects_overbought_buy`.
 
-## Configuration
+2. **Protect the 5m setup timeframe**
+   - Keep the public per-timeframe floors at 15m=65%, 5m=65%, 1m=70%.
+   - Add an explicit executable 5m setup floor of 70%.
+   - A 69% 5m setup therefore returns WAIT, even when 15m/1m confidence is strong.
+   - This fixes `test_low_confidence_means_wait` without changing the published hardening constants.
 
-New settings in `backend/app/core/config.py`:
+3. V2 fixes remain included:
+   - Support/resistance excludes the current trigger candle.
+   - Weighted MTF confidence remains 70%.
+   - No-chase guard: 1.0 ATR normally, 1.25 ATR for confirmed breakouts.
+   - Existing risk, cooldown, daily trade cap, VWAP, Supertrend and entry-location protections remain intact.
 
-- `LIVE_WS_RECONNECT_INITIAL_SECONDS=5`
-- `LIVE_WS_RECONNECT_MAX_SECONDS=60`
-- `LIVE_WS_HEARTBEAT_TIMEOUT_SECONDS=45`
+## Apply safely
 
-Do not add broker credentials to source control.
+1. Back up the current backend.
+2. Extract this ZIP over the backend root, replacing only the files in this overlay.
+3. Keep `.env`, database and runtime environment unchanged.
+4. Run `python -m pytest -q`. Expected result: the two regressions reported after v2 should be resolved.
+5. Restart the backend.
+6. Test during tomorrow's market hours in paper trading.
 
-## Verification after applying
-
-Run:
-
-```bash
-cd backend
-python -m pytest -q
-python -m pytest tests/live/test_client.py -q
-git diff --check
-```
-
-When the server is running:
-
-```bash
-curl -s http://127.0.0.1:8000/api/v1/live/health/status
-```
-
-During a live market session, the important fields are:
-
-- `state`
-- `last_tick_age_seconds`
-- `last_pong_age_seconds`
-- `reconnect_attempts`
-- `subscribed_tokens`
-- `last_error`
+Do not enable live trading based on this patch.

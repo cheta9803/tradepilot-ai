@@ -1,3 +1,4 @@
+from app.core.config import settings
 from app.strategy.cache import StrategyCache
 from app.strategy.entry_location import EntryLocationFilter
 from app.strategy.risk import RiskManager
@@ -23,7 +24,22 @@ class MultiTimeframeStrategy:
         "1m": 0.25,
     }
 
+    # V1 was too strict: requiring 75% on every timeframe produced almost
+    # no executable trades. Keep strong alignment, but judge confidence at
+    # the portfolio decision level instead of demanding 75% on each TF.
     MIN_CONFIDENCE = 70
+    MIN_CONFIDENCE_BY_TIMEFRAME = {
+        "15m": 65,
+        "5m": 65,
+        "1m": 70,
+    }
+
+    # 5m is the setup/risk timeframe, so do not allow a sub-70% setup even
+    # though the general per-timeframe floor is intentionally lower. This
+    # keeps the public hardening thresholds compatible while preventing a
+    # 69% 5m setup from becoming executable merely because the 15m and 1m
+    # scores are strong.
+    MIN_5M_SETUP_CONFIDENCE = 70
 
     @classmethod
     def calculate(
@@ -91,18 +107,25 @@ class MultiTimeframeStrategy:
         weak = [
             timeframe
             for timeframe in cls.TIMEFRAMES
-            if confidences[timeframe] < cls.MIN_CONFIDENCE
+            if confidences[timeframe] < cls.MIN_CONFIDENCE_BY_TIMEFRAME[timeframe]
         ]
 
+        # The 5m timeframe is the actual setup/risk gate. Keep it at 70% or
+        # better so a marginal setup cannot be rescued by strong 15m/1m
+        # confidence.
+        if confidences["5m"] < cls.MIN_5M_SETUP_CONFIDENCE and "5m" not in weak:
+            weak.append("5m")
+
         if weak:
+            details = ", ".join(
+                f"{timeframe}={confidences[timeframe]}%"
+                f"<{cls.MIN_CONFIDENCE_BY_TIMEFRAME[timeframe]}%"
+                for timeframe in weak
+            )
             return cls._wait_result(
                 signals=signals,
                 confidences=confidences,
-                reason=(
-                    "Confidence below "
-                    f"{cls.MIN_CONFIDENCE}% on "
-                    + ", ".join(weak)
-                ),
+                reason=f"Timeframe confidence too low: {details}",
             )
 
         entry_strategy = strategies["1m"]
@@ -136,10 +159,47 @@ class MultiTimeframeStrategy:
             )
         )
 
+        if confidence < cls.MIN_CONFIDENCE:
+            return cls._wait_result(
+                signals=signals,
+                confidences=confidences,
+                reason=(
+                    f"Weighted confidence {confidence}% is below "
+                    f"{cls.MIN_CONFIDENCE}%."
+                ),
+            )
+
         risk_strategy = strategies["5m"]
 
         entry = float(entry_strategy["entry"])
         atr_5m = float(risk_strategy["atr14"])
+
+        # Do not chase an already extended move. A valid breakout can still
+        # be rejected if the live entry is materially away from the 5m mean.
+        ema20_5m = risk_strategy.get("ema20")
+        trigger_reason = entry_strategy.get("entry_trigger_reason") or ""
+        is_breakout = "breakout" in trigger_reason.lower()
+        max_chase_atr = (
+            settings.no_chase_breakout_max_atr_from_ema20
+            if is_breakout
+            else settings.no_chase_max_atr_from_ema20
+        )
+
+        if (
+            settings.no_chase_filter_enabled
+            and ema20_5m is not None
+            and atr_5m > 0
+            and abs(entry - float(ema20_5m))
+            > atr_5m * max_chase_atr
+        ):
+            return cls._wait_result(
+                signals=signals,
+                confidences=confidences,
+                reason=(
+                    "Entry rejected: price is too far from 5m EMA20 "
+                    f"(limit={max_chase_atr:.2f} ATR) and the move is already extended."
+                ),
+            )
 
         stop_loss, target = RiskManager.calculate(
             signal=direction,

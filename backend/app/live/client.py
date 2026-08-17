@@ -19,15 +19,14 @@ class ConnectionState(Enum):
 
 
 class LiveClient:
-    """Owns the Angel market-data connection and reconnect lifecycle.
+    """Own the Angel market-data connection and reconnect lifecycle.
 
-    LiveClient owns exactly one reconnect supervisor. SmartWebSocketV2 owns
-    websocket protocol details and heartbeat generation.
+    TradePilot owns the reconnect/backoff lifecycle. SmartWebSocketV2 owns
+    the websocket protocol and heartbeat implementation.
 
-    We use the SDK's last_pong_timestamp for observability and, during NSE
-    market hours, use stale heartbeat/tick data to trigger a reconnect.
-    Outside market hours we do not treat the absence of ticks/pongs as a
-    failure, which is important for weekends and exchange-closed periods.
+    A new SmartWebSocketV2 instance represents a new connection generation.
+    Tick/pong timestamps are reset for every generation so health information
+    from an old socket can never make a new socket look healthy or stale.
     """
 
     MARKET_TIMEZONE = ZoneInfo("Asia/Kolkata")
@@ -62,6 +61,11 @@ class LiveClient:
         # Callback checks compare the owner SmartWebSocketV2 object, not the
         # websocket-client WebSocketApp passed to callbacks.
         self._generation = 0
+
+        # A newly connected socket gets a short grace period to receive its
+        # first market tick. This prevents an immediate false reconnect while
+        # subscriptions are being restored.
+        self._tick_grace_until: float | None = None
 
     def set_callbacks(
         self,
@@ -98,7 +102,8 @@ class LiveClient:
         feed_token = smart_api.getfeedToken()
 
         # SmartWebSocketV2 keeps subscription state on class attributes.
-        # Reset it before creating a fresh socket.
+        # TradePilot owns reconnects, so every new socket must start with a
+        # clean SDK subscription state.
         SmartWebSocketV2.RESUBSCRIBE_FLAG = False
         SmartWebSocketV2.input_request_dict = {}
 
@@ -184,6 +189,23 @@ class LiveClient:
         client.on_data = on_data
         client.on_error = on_error
         client.on_close = on_close
+
+        # Compatibility fix for the installed websocket-client version.
+        # websocket-client invokes its on_close callback as
+        #   on_close(wsapp, close_status_code, close_msg)
+        # while the current SmartWebSocketV2 SDK defines _on_close(self, wsapp)
+        # and therefore raises:
+        #   SmartWebSocketV2._on_close() takes 2 positional arguments but 4 were given
+        #
+        # SmartWebSocketV2.connect() passes self._on_close directly to
+        # websocket.WebSocketApp, so overriding only client.on_close is not
+        # enough. Adapt the SDK's internal callback to accept the newer
+        # websocket-client callback signature and forward it to our
+        # generation-safe callback above.
+        def sdk_on_close(wsapp, *args, **kwargs):
+            client.on_close(wsapp, *args, **kwargs)
+
+        client._on_close = sdk_on_close
 
         # Do not replace SmartWebSocketV2.on_pong. The SDK's internal
         # _on_pong() updates client.last_pong_timestamp.
@@ -285,20 +307,14 @@ class LiveClient:
     def _run_watchdog(self):
         """Detect a stale live feed during NSE market hours.
 
-        We intentionally do nothing outside market hours. This prevents
-        Saturday/Sunday and exchange-closed periods from causing pointless
-        reconnect loops merely because no market ticks are arriving.
+        Outside market hours, lack of ticks is normal and is ignored.
 
-        During market hours:
-        - stale pong for > 60s is considered unhealthy;
-        - stale market ticks for > 60s are considered unhealthy.
-
-        A reconnect is performed by closing the current SDK connection.
-        The supervisor then creates a fresh SmartWebSocketV2 instance.
+        During market hours, the watchdog checks both heartbeat and market
+        ticks. A new connection gets a grace period for its first tick so the
+        socket can finish subscription restoration before being judged stale.
         """
 
-        heartbeat_timeout = 60
-        tick_timeout = 60
+        timeout = max(60, settings.live_ws_heartbeat_timeout_seconds)
 
         while not self._stop_event.wait(5):
             if self.state != ConnectionState.CONNECTED:
@@ -309,14 +325,22 @@ class LiveClient:
 
             with self._client_lock:
                 client = self.client
+                generation = self._generation
 
             if client is None:
                 continue
 
             now = time.time()
 
+            # Only accept the SDK timestamp when it belongs to the current
+            # connection. This prevents a stale SDK timestamp from a previous
+            # socket from making the new socket appear unhealthy immediately.
             sdk_pong = getattr(client, "last_pong_timestamp", None)
-            if sdk_pong is not None:
+            if (
+                sdk_pong is not None
+                and self.last_connected_at is not None
+                and sdk_pong >= self.last_connected_at
+            ):
                 self.last_pong_at = sdk_pong
 
             pong_age = (
@@ -331,43 +355,67 @@ class LiveClient:
                 else now - self.last_tick_at
             )
 
-            stale_pong = (
-                pong_age is not None
-                and pong_age > heartbeat_timeout
+            # IMPORTANT: do not force a reconnect from pong age alone.
+            # SmartWebSocketV2 owns the websocket-client heartbeat and its
+            # internal pong timestamp depends on the broker heartbeat payload.
+            # In practice that timestamp can remain stale even while market
+            # ticks are arriving normally. Treating pong age as a hard failure
+            # therefore creates a false reconnect loop (observed roughly every
+            # 60 seconds). During market hours, the market-data tick stream is
+            # the authoritative feed-health signal.
+            no_tick_after_grace = (
+                self.last_tick_at is None
+                and self._tick_grace_until is not None
+                and now >= self._tick_grace_until
             )
 
             stale_ticks = (
-                tick_age is not None
-                and tick_age > tick_timeout
+                no_tick_after_grace
+                or (
+                    self.last_tick_at is not None
+                    and tick_age is not None
+                    and tick_age > timeout
+                )
             )
 
-            if not stale_pong and not stale_ticks:
+            if not stale_ticks:
+                # Pong age is retained in health() for diagnostics, but a
+                # stale SDK pong must not tear down a socket that is receiving
+                # fresh market ticks.
                 continue
 
             logger.warning(
                 "Angel live feed stale during market hours: "
-                "pong_age=%s tick_age=%s; forcing reconnect.",
+                "generation=%s pong_age=%s tick_age=%s; forcing reconnect.",
+                generation,
                 None if pong_age is None else round(pong_age, 1),
                 None if tick_age is None else round(tick_age, 1),
             )
 
             self.last_error = (
                 "Live feed stale during market hours "
-                f"(pong_age={None if pong_age is None else round(pong_age, 1)}, "
+                f"(generation={generation}, "
+                f"pong_age={None if pong_age is None else round(pong_age, 1)}, "
                 f"tick_age={None if tick_age is None else round(tick_age, 1)})"
             )
 
             try:
                 client.close_connection()
             except Exception:
-                logger.exception(
-                    "Failed to close stale Angel WebSocket."
-                )
+                logger.exception("Failed to close stale Angel WebSocket.")
 
     def mark_connected(self):
         now = time.time()
+        timeout = max(60, settings.live_ws_heartbeat_timeout_seconds)
+
         self.last_connected_at = now
+        self.last_disconnected_at = None
+
+        # IMPORTANT: these belong to the new connection generation. Never
+        # carry a tick timestamp from the old socket into the new socket.
+        self.last_tick_at = None
         self.last_pong_at = now
+        self._tick_grace_until = now + timeout
         self.last_error = None
         self._set_state(ConnectionState.CONNECTED)
 
@@ -399,10 +447,14 @@ class LiveClient:
             client = self.client
 
         sdk_pong = getattr(client, "last_pong_timestamp", None)
-        if sdk_pong is not None:
+        if (
+            sdk_pong is not None
+            and self.last_connected_at is not None
+            and sdk_pong >= self.last_connected_at
+        ):
             self.last_pong_at = sdk_pong
 
-        health = {
+        return {
             "state": self.state.value,
             "reconnect_attempts": self.reconnect_attempts,
             "connection_generation": generation,
@@ -413,12 +465,6 @@ class LiveClient:
             "last_pong_age_seconds": age(self.last_pong_at),
             "last_error": self.last_error,
         }
-
-        # Outside market hours, CONNECTED means the websocket is connected;
-        # lack of ticks is not treated as an error. During market hours,
-        # callers can see the actual pong/tick ages and the watchdog handles
-        # stale-feed recovery.
-        return health
 
     def close(self):
         self._stop_event.set()
@@ -432,9 +478,7 @@ class LiveClient:
             try:
                 client.close_connection()
             except Exception:
-                logger.exception(
-                    "Failed to close Angel market WebSocket."
-                )
+                logger.exception("Failed to close Angel market WebSocket.")
 
         thread = self._thread
         if thread is not None and thread is not threading.current_thread():
@@ -447,6 +491,10 @@ class LiveClient:
             self.client = None
             self.smart_api = None
             self.feed_token = None
+
+        self.last_tick_at = None
+        self.last_pong_at = None
+        self._tick_grace_until = None
 
         watchdog = self._watchdog_thread
         if (

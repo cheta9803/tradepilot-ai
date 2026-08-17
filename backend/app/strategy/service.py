@@ -142,6 +142,7 @@ class StrategyService:
         signal, confidence, reasons = (
             StrategyRules.evaluate(
                 ema20=indicators["ema20"],
+                ema50=indicators.get("ema50"),
                 rsi=indicators["rsi14"],
                 price=latest_price,
                 vwap=indicators["vwap"],
